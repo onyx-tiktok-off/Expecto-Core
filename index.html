@@ -1804,24 +1804,7 @@
             inp.click();
         }
 
-        function generatePDFFromPreview() {
-            const title = document.getElementById('previewTitle').textContent;
-            const isQuote = title.includes('DEVIS');
-            const type = isQuote ? 'quote' : 'invoice';
-            const numMatch = title.match(/[A-Z]{3}-\d{6}-\d{4}/);
-            if (numMatch) {
-                const num = numMatch[0];
-                const list = type==='quote' ? data.quotes : data.invoices;
-                const doc = list.find(d=>d.number===num);
-                if (doc) {
-                    generateNativePDF(doc, type);
-                } else {
-                    downloadPDF();
-                }
-            } else {
-                downloadPDF();
-            }
-        }
+        function generatePDFFromPreview(){ downloadPDF(); }
 
         function showNotification(msg, type='info') {
             const n = document.createElement('div');
