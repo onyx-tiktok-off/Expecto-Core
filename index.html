@@ -1611,21 +1611,58 @@
         function closeModal() { document.getElementById('previewModal').classList.remove('active'); }
         function printDocument() { window.print(); }
 
-        function downloadPDF() {
-            const { jsPDF } = window.jspdf;
-            const pdf = new jsPDF('p','mm','a4');
-            const el = document.querySelector('#previewBody .invoice-preview');
-            html2canvas(el, { backgroundColor: '#ffffff', scale: 2 }).then(canvas => {
-                const imgData = canvas.toDataURL('image/png');
-                const pdfWidth = pdf.internal.pageSize.getWidth();
-                const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-                pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-                pdf.save('document.pdf');
-                showNotification('PDF généré !', 'success');
-            }).catch(() => {
-                showNotification('Erreur PDF', 'error');
-            });
-        }
+function downloadPDF() {
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF('p', 'mm', 'a4');
+
+    // On cible uniquement la "feuille"
+    const el = document.querySelector('#previewBody .invoice-preview');
+    if (!el) {
+        showNotification('Aucun aperçu à exporter', 'error');
+        return;
+    }
+
+    // On attend que tous les logos/images soient chargés
+    const imgs = Array.from(el.querySelectorAll('img'));
+    const waitImages = Promise.all(
+        imgs.map(img => img.complete ? Promise.resolve() : new Promise(res => {
+            img.onload = img.onerror = () => res();
+        }))
+    );
+
+    waitImages.then(() => {
+        html2canvas(el, {
+            backgroundColor: '#ffffff',
+            scale: 2,
+            useCORS: true
+        }).then(canvas => {
+            const imgData = canvas.toDataURL('image/png');
+
+            const pageWidth  = pdf.internal.pageSize.getWidth();
+            const pageHeight = pdf.internal.pageSize.getHeight();
+
+            const imgWidth  = canvas.width;
+            const imgHeight = canvas.height;
+
+            // ratio pour que TOUT rentre dans la page (largeur + hauteur)
+            const ratio = Math.min(pageWidth / imgWidth, pageHeight / imgHeight);
+
+            const pdfWidth  = imgWidth * ratio;
+            const pdfHeight = imgHeight * ratio;
+
+            // on centre légèrement sur la page
+            const marginX = (pageWidth  - pdfWidth)  / 2;
+            const marginY = (pageHeight - pdfHeight) / 2;
+
+            pdf.addImage(imgData, 'PNG', marginX, marginY, pdfWidth, pdfHeight);
+            pdf.save('document.pdf');
+            showNotification('PDF généré !', 'success');
+        }).catch(() => {
+            showNotification('Erreur PDF', 'error');
+        });
+    });
+}
+
 
         function generateNativePDF(docData, type) {
             const { jsPDF } = window.jspdf;
