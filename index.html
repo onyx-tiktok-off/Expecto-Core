@@ -1,0 +1,1915 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ExpectoCore - Gestion Devis & Factures</title>
+    <!-- Bibliothèque jsPDF pour génération PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --primary-color: #e5e7eb;
+            --secondary-color: #111827;
+            --accent-color: #10b981;
+            --danger-color: #ef4444;
+            --warning-color: #f59e0b;
+            --dark: #0f172a;
+            --gray: #9ca3af;
+            --light: #1f2937;
+            --white: #ffffff;
+        }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background: #0b0b0b; min-height: 100vh; color: #e5e7eb; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        .header { background: #111827; border-radius: 15px; padding: 30px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.35); text-align: center; }
+        .logo { display: flex; align-items: center; justify-content: center; gap: 15px; }
+        .logo img { filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); transition: transform .3s; }
+        .logo img:hover { transform: scale(1.05); }
+        .tabs { display: flex; gap: 10px; margin-bottom: 30px; flex-wrap: wrap; }
+        .tab-button { background: #1f2937; border: none; padding: 12px 20px; border-radius: 10px; font-weight: 600; cursor: pointer; transition: all .2s; display: flex; align-items: center; gap: 8px; color: #e5e7eb; }
+        .tab-button.active, .tab-button:hover { background: #e5e7eb; color: #111827; box-shadow: 0 5px 15px rgba(229,231,235,.25); }
+        .panel { display: none; background: #111827; border-radius: 15px; padding: 25px; box-shadow: 0 10px 40px rgba(0,0,0,.35); margin-bottom: 30px; color: #e5e7eb; }
+        .panel.active { display: block; }
+        .panel h2 { margin-bottom: 20px; color: #e5e7eb; }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px,1fr)); gap: 20px; margin-bottom: 25px; }
+        .form-group label { font-weight: 600; margin-bottom: 5px; display: block; color: #e5e7eb; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px 12px; background: #0f172a; border: 1px solid #1f2937; border-radius: 8px; font-size: 14px; transition: all .2s; color: #e5e7eb; }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: #e5e7eb; box-shadow: 0 0 0 3px rgba(229,231,235,.1); }
+        textarea { resize: vertical; min-height: 70px; }
+        .services-section { margin-bottom: 20px; }
+        .services-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .services-table { width: 100%; border-collapse: collapse; }
+        .services-table th, .services-table td { border: 1px solid #1f2937; padding: 10px; font-size: 14px; }
+        .services-table th { background: #1f2937; text-align: left; color: #e5e7eb; }
+        .services-table td { background: #0f172a; }
+        .services-table td input, .services-table td select { width: 100%; background: #030712; border: 1px solid #1f2937; color: #e5e7eb; }
+        .actions { display: flex; gap: 10px; }
+        .totals-section { margin-top: 20px; margin-bottom: 20px; }
+        .totals-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px,1fr)); gap: 15px; }
+        .total-item { background: #0f172a; border-radius: 12px; padding: 15px 20px; }
+        .total-label { font-size: 13px; color: #9ca3af; }
+        .total-value { font-size: 22px; font-weight: 700; color: #e5e7eb; }
+        .btn { background: #e5e7eb; border: none; padding: 10px 18px; border-radius: 10px; color: #111827; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; transition: all .2s; }
+        .btn:hover { opacity: .9; transform: translateY(-1px); }
+        .btn-secondary { background: #374151; color: #e5e7eb; }
+        .btn-danger { background: #ef4444; color: #fff; }
+        .btn-warning { background: #f59e0b; color: #111827; }
+        .btn-success { background: #10b981; color: #fff; }
+        .btn-primary { background: #e5e7eb; color: #111827; }
+        .btn-icon { padding: 7px 10px; }
+        .actions-section { display: flex; gap: 10px; flex-wrap: wrap; }
+        .documents-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px,1fr)); gap: 20px; }
+        .document-card { background: #0f172a; border-radius: 12px; padding: 15px 18px; transition: all .2s; border: 1px solid #1f2937; }
+        .document-card:hover { background: #111827; transform: translateY(-2px); }
+        .document-header { display: flex; justify-content: space-between; margin-bottom: 10px; align-items: center; }
+        .document-number { font-weight: 700; color: #e5e7eb; }
+        .document-status { padding: 4px 9px; border-radius: 6px; font-size: 12px; font-weight: 600; }
+        .status-draft { background: #f59e0b; color: #111827; }
+        .status-sent { background: #e5e7eb; color: #111827; }
+        .status-paid { background: #10b981; color: #fff; }
+        .document-info { color: #d1d5db; font-size: 14px; line-height: 1.6; }
+        .document-actions { display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,.5); z-index: 1000; animation: fadeIn .3s; }
+        .modal.active { display: flex; align-items: center; justify-content: center; }
+        .modal-content { background: #111827; border-radius: 15px; width: 90%; max-width: 800px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,.4); color: #e5e7eb; }
+        .modal-header { padding: 25px; background: #0f172a; border-radius: 15px 15px 0 0; }
+        .modal-body { padding: 25px; background: #111827; }
+        .modal-footer { padding: 20px 25px; background: #0f172a; border-radius: 0 0 15px 15px; display: flex; justify-content: flex-end; gap: 10px; }
+        @media print { .no-print { display: none !important; } .modal-content { box-shadow: none; border: none; } body { background: #fff; color: #000; } }
+        @media (max-width: 768px) { .container { padding: 10px; } .tabs { flex-direction: column; } .form-grid { grid-template-columns: 1fr; } .actions-section { flex-direction: column; } .btn { width: 100%; justify-content: center; } }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px,1fr)); gap: 20px; margin-bottom: 30px; }
+        .stat-card { background: #1f2937; color: #e5e7eb; padding: 25px; border-radius: 15px; position: relative; overflow: hidden; border: 1px solid #374151; }
+        .stat-value { font-size: 36px; font-weight: 700; margin-bottom: 5px; }
+        .stat-label { font-size: 14px; opacity: .9; }
+        .search-bar { display: flex; gap: 10px; margin-bottom: 20px; }
+        .search-input { flex: 1; padding: 12px; border: 2px solid #1f2937; border-radius: 8px; font-size: 14px; background: #0f172a; color: #e5e7eb; }
+        .search-input:focus { outline: none; border-color: #e5e7eb; }
+        .notification { position: fixed; bottom: 20px; right: 20px; padding: 15px 20px; background: #10b981; color: #fff; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,.3); animation: slideIn .3s; z-index: 2000; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes slideOut { to { transform: translateX(100%); opacity: 0; } }
+        .invoice-preview { background: #111827; padding: 40px; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,.35); color: #e5e7eb; }
+        .invoice-header { display: flex; justify-content: space-between; margin-bottom: 40px; padding-bottom: 20px; border-bottom: 2px solid #1f2937; }
+        .invoice-details { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 30px; }
+        .invoice-table { width: 100%; margin: 30px 0; }
+        .invoice-table th { background: #1f2937; padding: 15px; text-align: left; color: #e5e7eb; }
+        .invoice-table td { padding: 15px; border-bottom: 1px solid #1f2937; }
+        .invoice-footer { margin-top: 40px; padding-top: 20px; border-top: 2px solid #1f2937; }
+        .signature-area { margin-top: 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 50px; }
+        .signature-box { padding-top: 60px; border-top: 2px solid #e5e7eb; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="logo">
+                <img src="https://i.ibb.co/wFpT2SmJ/4933f2d3e9fa.png" alt="ExpectoCore Logo" style="height: 240px; width: auto;">
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="tabs">
+            <button class="tab-button active" onclick="switchTab(event,'dashboard')">📊 Tableau de bord</button>
+            <button class="tab-button" onclick="switchTab(event,'quote')">📝 Nouveau Devis</button>
+            <button class="tab-button" onclick="switchTab(event,'invoice')">💰 Nouvelle Facture</button>
+            <button class="tab-button" onclick="switchTab(event,'documents')">📄 Devis & Factures</button>
+            <button class="tab-button" onclick="switchTab(event,'clients')">👥 Clients</button>
+            <button class="tab-button" onclick="switchTab(event,'services')">🧰 Services</button>
+            <button class="tab-button" onclick="switchTab(event,'parts')">🧩 Pièces & stocks</button>
+            <button class="tab-button" onclick="switchTab(event,'settings')">⚙️ Paramètres</button>
+        </div>
+
+        <!-- Dashboard -->
+        <div id="dashboard-panel" class="panel active">
+            <h2>Tableau de bord</h2>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="totalQuotes">0</div>
+                    <div class="stat-label">Devis ce mois</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="totalInvoices">0</div>
+                    <div class="stat-label">Factures ce mois</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="totalRevenue">0 €</div>
+                    <div class="stat-label">Chiffre d'affaires (facturé)</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="totalClients">0</div>
+                    <div class="stat-label">Clients</div>
+                </div>
+            </div>
+            <h3 style="color:#e5e7eb;">Activité récente</h3>
+            <div id="recentActivities" class="documents-grid"></div>
+        </div>
+
+        <!-- Devis -->
+        <div id="quote-panel" class="panel">
+            <h2>Créer un nouveau devis</h2>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Numéro de devis *</label>
+                    <input type="text" id="quoteNumber" placeholder="AUTO" readonly>
+                </div>
+                <div class="form-group">
+                    <label>Date *</label>
+                    <input type="date" id="quoteDate" required>
+                </div>
+                <div class="form-group">
+                    <label>Client *</label>
+                    <select id="quoteClient" onchange="updateClientInfo('quote')" required>
+                        <option value="">Sélectionner un client</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Validité (jours)</label>
+                    <input type="number" id="quoteValidity" value="30">
+                </div>
+            </div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Email du client</label>
+                    <input type="email" id="quoteClientEmail">
+                </div>
+                <div class="form-group">
+                    <label>Téléphone du client</label>
+                    <input type="tel" id="quoteClientPhone">
+                </div>
+                <div class="form-group" style="grid-column:1/-1;">
+                    <label>Adresse du client</label>
+                    <input type="text" id="quoteClientAddress">
+                </div>
+            </div>
+            <!-- Services -->
+            <div class="services-section">
+                <div class="services-header">
+                    <h3 style="color:#e5e7eb;">Services & Prestations</h3>
+                    <button class="btn btn-primary btn-sm" onclick="addServiceRow('quote')">➕ Ajouter une ligne</button>
+                </div>
+                <table class="services-table">
+                    <thead>
+                        <tr>
+                            <th>Description</th>
+                            <th style="width: 100px;">Qté</th>
+                            <th style="width: 150px;">Prix unitaire</th>
+                            <th style="width: 120px;">TVA %</th>
+                            <th style="width: 150px;">Total HT</th>
+                            <th style="width: 50px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="quoteServicesTable">
+                        <tr>
+                            <td>
+                                <select class="service-select" onchange="updateServicePrice(this,'quote')">
+                                    <option value="">Sélectionner un service</option>
+                                </select>
+                            </td>
+                            <td><input type="number" value="1" min="1" onchange="calculateRow(this)"></td>
+                            <td><input type="number" step="0.01" value="0" onchange="calculateRow(this)"></td>
+                            <td>
+                                <select onchange="calculateRow(this)">
+                                    <option value="20">20%</option>
+                                    <option value="10">10%</option>
+                                    <option value="5.5">5.5%</option>
+                                    <option value="0">0%</option>
+                                </select>
+                            </td>
+                            <td><input type="number" step="0.01" value="0" readonly></td>
+                            <td class="actions"><button class="btn btn-danger btn-icon btn-sm" onclick="removeServiceRow(this)">🗑️</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <!-- Pièces utilisées -->
+            <div class="services-section">
+                <div class="services-header">
+                    <h3 style="color:#e5e7eb;">Pièces utilisées</h3>
+                    <button class="btn btn-primary btn-sm" onclick="addPartRow('quote')">➕ Ajouter une pièce</button>
+                </div>
+                <table class="services-table">
+                    <thead>
+                        <tr>
+                            <th>Pièce</th>
+                            <th style="width: 100px;">Qté</th>
+                            <th style="width: 150px;">Prix unitaire</th>
+                            <th style="width: 120px;">TVA %</th>
+                            <th style="width: 150px;">Total HT</th>
+                            <th style="width: 50px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="quotePartsTable">
+                        <!-- lignes de pièces -->
+                    </tbody>
+                </table>
+            </div>
+            <div class="form-group">
+                <label>Notes internes (non visibles)</label>
+                <textarea id="quoteInternalNotes" rows="3"></textarea>
+            </div>
+            <div class="form-group">
+                <label>Conditions et notes (visibles)</label>
+                <textarea id="quotePublicNotes" rows="3"></textarea>
+            </div>
+            <div class="totals-section">
+                <div class="totals-grid">
+                    <div class="total-item"><span class="total-label">Total HT</span><span class="total-value" id="quoteTotalHT">0.00 €</span></div>
+                    <div class="total-item"><span class="total-label">Total TVA</span><span class="total-value" id="quoteTotalTVA">0.00 €</span></div>
+                    <div class="total-item" style="border:2px solid #e5e7eb;"><span class="total-label">Total TTC</span><span class="total-value" id="quoteTotalTTC" style="color:#10b981;">0.00 €</span></div>
+                </div>
+            </div>
+            <div class="actions-section">
+                <button class="btn btn-primary" onclick="saveDocument('quote','draft')">💾 Enregistrer comme brouillon</button>
+                <button class="btn btn-success" onclick="saveDocument('quote','final')">✅ Finaliser le devis</button>
+                <button class="btn btn-warning" onclick="previewDocument('quote')">👁️ Aperçu</button>
+                <button class="btn btn-secondary" onclick="resetForm('quote')">🔄 Réinitialiser</button>
+            </div>
+        </div>
+
+        <!-- Facture -->
+        <div id="invoice-panel" class="panel">
+            <h2>Créer une nouvelle facture</h2>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Numéro de facture *</label>
+                    <input type="text" id="invoiceNumber" placeholder="AUTO" readonly>
+                </div>
+                <div class="form-group">
+                    <label>Date *</label>
+                    <input type="date" id="invoiceDate" required>
+                </div>
+                <div class="form-group">
+                    <label>Date d'échéance</label>
+                    <input type="date" id="invoiceDueDate">
+                </div>
+                <div class="form-group">
+                    <label>Client *</label>
+                    <select id="invoiceClient" onchange="updateClientInfo('invoice')" required>
+                        <option value="">Sélectionner un client</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Convertir depuis un devis</label>
+                    <select id="convertFromQuote" onchange="loadQuoteData()">
+                        <option value="">-- Aucun --</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Mode de paiement</label>
+                    <select id="paymentMethod">
+                        <option value="Virement bancaire">Virement bancaire</option>
+                        <option value="Carte bancaire">Carte bancaire</option>
+                        <option value="Chèque">Chèque</option>
+                        <option value="Espèces">Espèces</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Statut du paiement</label>
+                    <select id="paymentStatus">
+                        <option value="pending">En attente</option>
+                        <option value="paid">Payé</option>
+                        <option value="partial">Partiel</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-grid">
+                <div class="form-group"><label>Email du client</label><input type="email" id="invoiceClientEmail"></div>
+                <div class="form-group"><label>Téléphone du client</label><input type="tel" id="invoiceClientPhone"></div>
+                <div class="form-group" style="grid-column:1/-1;"><label>Adresse du client</label><input type="text" id="invoiceClientAddress"></div>
+            </div>
+            <!-- Services -->
+            <div class="services-section">
+                <div class="services-header">
+                    <h3 style="color:#e5e7eb;">Services & Prestations</h3>
+                    <button class="btn btn-primary btn-sm" onclick="addServiceRow('invoice')">➕ Ajouter une ligne</button>
+                </div>
+                <table class="services-table">
+                    <thead>
+                        <tr>
+                            <th>Description</th>
+                            <th style="width: 100px;">Qté</th>
+                            <th style="width: 150px;">Prix unitaire</th>
+                            <th style="width: 120px;">TVA %</th>
+                            <th style="width: 150px;">Total HT</th>
+                            <th style="width: 50px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="invoiceServicesTable">
+                        <tr>
+                            <td>
+                                <select class="service-select" onchange="updateServicePrice(this,'invoice')">
+                                    <option value="">Sélectionner un service</option>
+                                </select>
+                            </td>
+                            <td><input type="number" value="1" min="1" onchange="calculateRow(this)"></td>
+                            <td><input type="number" step="0.01" value="0" onchange="calculateRow(this)"></td>
+                            <td>
+                                <select onchange="calculateRow(this)">
+                                    <option value="20">20%</option>
+                                    <option value="10">10%</option>
+                                    <option value="5.5">5.5%</option>
+                                    <option value="0">0%</option>
+                                </select>
+                            </td>
+                            <td><input type="number" step="0.01" value="0" readonly></td>
+                            <td class="actions"><button class="btn btn-danger btn-icon btn-sm" onclick="removeServiceRow(this)">🗑️</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <!-- Pièces utilisées -->
+            <div class="services-section">
+                <div class="services-header">
+                    <h3 style="color:#e5e7eb;">Pièces utilisées</h3>
+                    <button class="btn btn-primary btn-sm" onclick="addPartRow('invoice')">➕ Ajouter une pièce</button>
+                </div>
+                <table class="services-table">
+                    <thead>
+                        <tr>
+                            <th>Pièce</th>
+                            <th style="width: 100px;">Qté</th>
+                            <th style="width: 150px;">Prix unitaire</th>
+                            <th style="width: 120px;">TVA %</th>
+                            <th style="width: 150px;">Total HT</th>
+                            <th style="width: 50px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="invoicePartsTable">
+                        <!-- lignes de pièces -->
+                    </tbody>
+                </table>
+            </div>
+            <div class="totals-section">
+                <div class="totals-grid">
+                    <div class="total-item"><span class="total-label">Total HT</span><span class="total-value" id="invoiceTotalHT">0.00 €</span></div>
+                    <div class="total-item"><span class="total-label">Total TVA</span><span class="total-value" id="invoiceTotalTVA">0.00 €</span></div>
+                    <div class="total-item" style="border:2px solid #e5e7eb;"><span class="total-label">Total TTC</span><span class="total-value" id="invoiceTotalTTC" style="color:#10b981;">0.00 €</span></div>
+                </div>
+            </div>
+            <div class="actions-section">
+                <button class="btn btn-primary" onclick="saveDocument('invoice','draft')">💾 Enregistrer comme brouillon</button>
+                <button class="btn btn-success" onclick="saveDocument('invoice','final')">✅ Finaliser la facture</button>
+                <button class="btn btn-warning" onclick="previewDocument('invoice')">👁️ Aperçu</button>
+                <button class="btn btn-secondary" onclick="resetForm('invoice')">🔄 Réinitialiser</button>
+            </div>
+        </div>
+
+        <!-- Documents -->
+        <div id="documents-panel" class="panel">
+            <h2>Liste des devis & factures</h2>
+            <div class="search-bar">
+                <input type="text" id="documentSearch" class="search-input" placeholder="Rechercher un document..." oninput="searchDocuments()">
+                <select id="documentFilter" class="search-input" onchange="filterDocuments()">
+                    <option value="all">Tous</option>
+                    <option value="quotes">Devis</option>
+                    <option value="invoices">Factures</option>
+                    <option value="draft">Brouillons</option>
+                    <option value="sent">Envoyés</option>
+                    <option value="paid">Payés</option>
+                </select>
+            </div>
+            <div id="documentsList" class="documents-grid"></div>
+        </div>
+
+        <!-- Clients -->
+        <div id="clients-panel" class="panel">
+            <h2>Gestion des clients</h2>
+            <div class="search-bar">
+                <input type="text" id="clientSearch" class="search-input" placeholder="Rechercher un client..." oninput="searchClients()">
+                <button class="btn btn-primary" onclick="showAddClientModal()">➕ Ajouter un client</button>
+            </div>
+            <div id="clientsList" class="documents-grid"></div>
+        </div>
+
+        <!-- Services -->
+        <div id="services-panel" class="panel">
+            <h2>Gestion des services</h2>
+            <div class="search-bar">
+                <input type="text" id="serviceSearch" class="search-input" placeholder="Rechercher un service..." oninput="searchServices()">
+                <button class="btn btn-primary" onclick="showAddServiceModal()">➕ Ajouter un service</button>
+            </div>
+            <table class="services-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nom</th>
+                        <th>Catégorie</th>
+                        <th>Prix HT</th>
+                        <th>TVA</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="servicesTableBody"></tbody>
+            </table>
+        </div>
+
+        <!-- Pièces & Stocks -->
+        <div id="parts-panel" class="panel">
+            <h2>Pièces & stocks</h2>
+            <div class="search-bar">
+                <input type="text" id="partSearch" class="search-input" placeholder="Rechercher une pièce..." oninput="searchParts()">
+                <button class="btn btn-primary" onclick="showAddPartModal()">➕ Ajouter une pièce</button>
+            </div>
+            <table class="services-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nom</th>
+                        <th>Référence</th>
+                        <th>Stock</th>
+                        <th>Prix HT</th>
+                        <th>TVA</th>
+                        <th>Emplacement</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="partsTableBody"></tbody>
+            </table>
+        </div>
+
+        <!-- Paramètres -->
+        <div id="settings-panel" class="panel">
+            <h2>Paramètres de l'entreprise</h2>
+            <div class="form-grid">
+                <div class="form-group"><label>Nom de l'entreprise</label><input type="text" id="companyName" placeholder="ExpectoCore"></div>
+                <div class="form-group"><label>Slogan</label><input type="text" id="companySlogan" placeholder=""></div>
+                <div class="form-group"><label>SIRET</label><input type="text" id="companySiret" placeholder="SIRET"></div>
+                <div class="form-group"><label>N° TVA</label><input type="text" id="companyVAT" placeholder="FR..."></div>
+            </div>
+            <div class="form-grid">
+                <div class="form-group" style="grid-column:1/-1;"><label>Adresse</label><input type="text" id="companyAddress" placeholder="Adresse complète"></div>
+                <div class="form-group"><label>Code postal</label><input type="text" id="companyZip" placeholder="75000"></div>
+                <div class="form-group"><label>Ville</label><input type="text" id="companyCity" placeholder="Paris"></div>
+                <div class="form-group"><label>Pays</label><input type="text" id="companyCountry" placeholder="France"></div>
+            </div>
+            <div class="form-grid">
+                <div class="form-group"><label>Email</label><input type="email" id="companyEmail" placeholder="contact@expectocore.fr"></div>
+                <div class="form-group"><label>Téléphone</label><input type="tel" id="companyPhone" placeholder="07.07.07.07.07"></div>
+                <div class="form-group"><label>Site web</label><input type="text" id="companyWebsite" placeholder="www.expectocore.fr"></div>
+            </div>
+            <div class="form-group"><label>Conditions générales de vente</label><textarea id="companyCGV" rows="4"></textarea></div>
+            <div class="form-group"><label>Mentions légales à afficher</label><textarea id="companyLegalMentions" rows="3"></textarea></div>
+            <div class="actions-section">
+                <button class="btn btn-success" onclick="saveSettings()">💾 Sauvegarder les paramètres</button>
+                <button class="btn btn-warning" onclick="exportData()">📥 Exporter les données</button>
+                <button class="btn btn-primary" onclick="importData()">📤 Importer des données</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Aperçu -->
+    <div id="previewModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header"><h2 id="previewTitle">Aperçu du document</h2></div>
+            <div class="modal-body" id="previewBody"></div>
+            <div class="modal-footer no-print">
+                <button class="btn btn-success" onclick="printDocument()">🖨️ Imprimer</button>
+                <button class="btn btn-primary" onclick="generatePDFFromPreview()">📄 Télécharger PDF</button>
+                <button class="btn btn-warning" onclick="sendByEmail()">📧 Envoyer par email</button>
+                <button class="btn btn-secondary" onclick="closeModal()">❌ Fermer</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let data = {
+            clients: [],
+            services: [],
+            parts: [],
+            quotes: [],
+            invoices: [],
+            settings: {
+                company: {
+                    name: 'ExpectoCore',
+                    slogan: '',
+                    siret: '',
+                    vat: '',
+                    address: '44 Rue de la gare',
+                    zip: '57800',
+                    city: 'Béning-lès-Saint-Avold',
+                    country: 'France',
+                    email: 'contact@expectocore.fr',
+                    phone: '07.07.07.07.07',
+                    website: 'www.expectocore.fr',
+                    cgv: 'Paiement à 30 jours. Garantie 3 mois sur les réparations. Les pièces remplacées restent la propriété du client.',
+                    legalMentions: 'ExpectoCore - Entreprise de réparation informatique - SIRET: En cours d\'immatriculation'
+                },
+                counters: { quote: 1, invoice: 1, client: 1, part: 1 }
+            }
+        };
+
+        let currentEdit = { type: null, number: null };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeApp();
+        });
+
+        function initializeApp() {
+            loadData();
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('quoteDate').value = today;
+            document.getElementById('invoiceDate').value = today;
+            const dueDate = new Date(); dueDate.setDate(dueDate.getDate() + 30);
+            document.getElementById('invoiceDueDate').value = dueDate.toISOString().split('T')[0];
+            initializeDefaultServices();
+            initializeDefaultParts();
+            updateDashboard();
+            generateDocumentNumbers();
+            loadClients();
+            loadServices();
+            loadParts();
+            updateServiceSelects();
+            updatePartsSelects();
+            updateQuoteConversionSelect();
+        }
+
+        function loadData() {
+            const savedData = localStorage.getItem('expectocoreData');
+            if (savedData) data = JSON.parse(savedData);
+        }
+
+        function saveData() {
+            localStorage.setItem('expectocoreData', JSON.stringify(data));
+            showNotification('Données sauvegardées !', 'success');
+        }
+
+        function initializeDefaultServices() {
+            if (data.services.length === 0) {
+                data.services = [
+                    { id: 'SRV001', name: 'Diagnostic PC', category: 'Diagnostic', price: 30, vat: 20 },
+                    { id: 'SRV002', name: 'Réinstallation Windows', category: 'Logiciel', price: 60, vat: 20 },
+                    { id: 'SRV003', name: 'Nettoyage virus', category: 'Sécurité', price: 45, vat: 20 },
+                    { id: 'SRV004', name: 'Remplacement disque dur', category: 'Matériel', price: 80, vat: 20 },
+                    { id: 'SRV005', name: 'Ajout RAM 8GB', category: 'Matériel', price: 50, vat: 20 },
+                    { id: 'SRV006', name: 'Remplacement écran laptop', category: 'Matériel', price: 120, vat: 20 },
+                    { id: 'SRV007', name: 'Sauvegarde données', category: 'Service', price: 40, vat: 20 },
+                    { id: 'SRV008', name: 'Configuration réseau', category: 'Réseau', price: 55, vat: 20 },
+                    { id: 'SRV009', name: 'Installation antivirus', category: 'Sécurité', price: 25, vat: 20 },
+                    { id: 'SRV010', name: 'Optimisation performances', category: 'Service', price: 35, vat: 20 },
+                    { id: 'SRV011', name: 'Récupération données', category: 'Service', price: 150, vat: 20 },
+                    { id: 'SRV012', name: 'Assemblage PC sur mesure', category: 'Matériel', price: 100, vat: 20 }
+                ];
+            }
+        }
+
+        function initializeDefaultParts() {
+            if (!data.parts || data.parts.length === 0) {
+                data.parts = [
+                    { id: 'PCE001', name: 'SSD 500GB', ref: 'SSD500', stock: 5, price: 55, vat: 20, location: 'Étagère A' },
+                    { id: 'PCE002', name: 'Alimentation 500W', ref: 'PSU500', stock: 3, price: 45, vat: 20, location: 'Étagère B' },
+                    { id: 'PCE003', name: 'Ventilateur 120mm', ref: 'FAN120', stock: 10, price: 8, vat: 20, location: 'Boîte ventilateurs' }
+                ];
+            }
+        }
+
+        function switchTab(ev, tabName) {
+            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+            document.getElementById(tabName + '-panel').classList.add('active');
+            ev.target.classList.add('active');
+            if (tabName === 'dashboard') updateDashboard();
+            if (tabName === 'clients') displayClients();
+            if (tabName === 'services') displayServices();
+            if (tabName === 'parts') displayParts();
+            if (tabName === 'documents') displayDocuments();
+            if (tabName === 'settings') loadSettings();
+        }
+
+        function updateDashboard() {
+            const m = new Date().getMonth();
+            const y = new Date().getFullYear();
+            const monthQuotes = data.quotes.filter(q => {
+                const d = new Date(q.date);
+                return d.getMonth() === m && d.getFullYear() === y;
+            });
+            const monthInvoices = data.invoices.filter(i => {
+                const d = new Date(i.date);
+                return d.getMonth() === m && d.getFullYear() === y;
+            });
+            const totalRevenue = monthInvoices.reduce((s, i) => s + (i.totalTTC || 0), 0);
+            document.getElementById('totalQuotes').textContent = monthQuotes.length;
+            document.getElementById('totalInvoices').textContent = monthInvoices.length;
+            document.getElementById('totalRevenue').textContent = totalRevenue.toFixed(2) + ' €';
+            document.getElementById('totalClients').textContent = data.clients.length;
+            displayRecentActivities();
+        }
+
+        function displayRecentActivities() {
+            const acts = [];
+            data.quotes.slice(-3).forEach(q => acts.push({type:'quote',...q}));
+            data.invoices.slice(-3).forEach(i => acts.push({type:'invoice',...i}));
+            acts.sort((a,b)=> new Date(b.date)-new Date(a.date));
+            const c = document.getElementById('recentActivities');
+            c.innerHTML = '';
+            if (acts.length === 0) {
+                c.innerHTML = '<p style="text-align:center;color:#9ca3af;">Aucune activité récente</p>';
+                return;
+            }
+            acts.slice(0,6).forEach(a=>{
+                const card = document.createElement('div');
+                card.className = 'document-card';
+                card.innerHTML = `
+                    <div class="document-header">
+                        <span class="document-number">${a.type==='quote'?'📝':'💰'} ${a.number}</span>
+                        <span class="document-status status-${a.status||'draft'}">${getStatusLabel(a.status)}</span>
+                    </div>
+                    <div class="document-info">
+                        <strong>${a.client||'Client non défini'}</strong><br>
+                        Date: ${formatDate(a.date)}<br>
+                        Total: ${(a.totalTTC||0).toFixed(2)} € TTC
+                    </div>
+                    <div class="document-actions">
+                        <button class="btn btn-primary btn-sm" onclick="viewDocument('${a.type}','${a.number}')">👁️ Voir</button>
+                        <button class="btn btn-warning btn-sm" onclick="editDocument('${a.type}','${a.number}')">✏️ Modifier</button>
+                    </div>
+                `;
+                c.appendChild(card);
+            });
+        }
+
+        function loadClients() {
+            const ids = ['quoteClient','invoiceClient'];
+            ids.forEach(id=>{
+                const s = document.getElementById(id);
+                if (!s) return;
+                s.innerHTML = '<option value="">Sélectionner un client</option>';
+                data.clients.forEach(cl=>{
+                    const opt = document.createElement('option');
+                    opt.value = cl.name;
+                    opt.textContent = cl.name;
+                    opt.dataset.email = cl.email;
+                    opt.dataset.phone = cl.phone;
+                    opt.dataset.address = cl.address;
+                    s.appendChild(opt);
+                });
+            });
+        }
+
+        function updateClientInfo(type) {
+            const sel = document.getElementById(type + 'Client');
+            const opt = sel.selectedOptions[0];
+            if (opt && opt.value) {
+                document.getElementById(type + 'ClientEmail').value = opt.dataset.email || '';
+                document.getElementById(type + 'ClientPhone').value = opt.dataset.phone || '';
+                document.getElementById(type + 'ClientAddress').value = opt.dataset.address || '';
+            }
+        }
+
+        function displayClients() {
+            const c = document.getElementById('clientsList');
+            c.innerHTML = '';
+            if (data.clients.length === 0) {
+                c.innerHTML = '<p style="text-align:center;color:#9ca3af;">Aucun client enregistré</p>';
+                return;
+            }
+            data.clients.forEach(cl=>{
+                const card = document.createElement('div');
+                card.className = 'document-card';
+                card.innerHTML = `
+                    <div class="document-header"><span class="document-number">👤 ${cl.name}</span></div>
+                    <div class="document-info">
+                        📧 ${cl.email||'Non renseigné'}<br>
+                        📞 ${cl.phone||'Non renseigné'}<br>
+                        📍 ${cl.address||'Non renseigné'}
+                    </div>
+                    <div class="document-actions">
+                        <button class="btn btn-primary btn-sm" onclick="editClient('${cl.id}')">✏️ Modifier</button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteClient('${cl.id}')">🗑️ Supprimer</button>
+                    </div>
+                `;
+                c.appendChild(card);
+            });
+        }
+
+        function showAddClientModal() {
+            const name = prompt('Nom du client:');
+            if (!name) return;
+            const email = prompt('Email du client:') || '';
+            const phone = prompt('Téléphone du client:') || '';
+            const address = prompt('Adresse du client:') || '';
+            const cl = {
+                id: 'CLT' + String(data.settings.counters.client++).padStart(4,'0'),
+                name, email, phone, address, createdAt: new Date().toISOString()
+            };
+            data.clients.push(cl);
+            saveData();
+            loadClients();
+            displayClients();
+            showNotification('Client ajouté avec succès !','success');
+        }
+
+        function editClient(id) {
+            const cl = data.clients.find(c=>c.id===id);
+            if (!cl) return;
+            const name = prompt('Nom du client:', cl.name);
+            if (!name) return;
+            cl.name = name;
+            cl.email = prompt('Email du client:', cl.email) || '';
+            cl.phone = prompt('Téléphone du client:', cl.phone) || '';
+            cl.address = prompt('Adresse du client:', cl.address) || '';
+            saveData();
+            loadClients();
+            displayClients();
+            showNotification('Client modifié !','success');
+        }
+
+        function deleteClient(id) {
+            if (!confirm('Supprimer ce client ?')) return;
+            data.clients = data.clients.filter(c=>c.id!==id);
+            saveData();
+            loadClients();
+            displayClients();
+            showNotification('Client supprimé !','success');
+        }
+
+        function loadServices() { updateServiceSelects(); }
+        function loadParts() { updatePartsSelects(); }
+
+        function updateServiceSelects() {
+            document.querySelectorAll('.service-select').forEach(sel=>{
+                const cur = sel.value;
+                sel.innerHTML = '<option value="">Sélectionner un service</option>';
+                data.services.forEach(s=>{
+                    const opt = document.createElement('option');
+                    opt.value = s.id;
+                    opt.textContent = s.name;
+                    opt.dataset.price = s.price;
+                    opt.dataset.vat = s.vat;
+                    sel.appendChild(opt);
+                });
+                sel.value = cur;
+            });
+        }
+
+        function updatePartsSelects() {
+            document.querySelectorAll('.part-select').forEach(sel=>{
+                const cur = sel.value;
+                sel.innerHTML = '<option value="">Sélectionner une pièce</option>';
+                data.parts.forEach(p=>{
+                    const opt = document.createElement('option');
+                    opt.value = p.id;
+                    opt.textContent = p.name + (p.stock !== undefined ? ` (stock: ${p.stock})` : '');
+                    opt.dataset.price = p.price;
+                    opt.dataset.vat = p.vat;
+                    opt.dataset.stock = p.stock;
+                    sel.appendChild(opt);
+                });
+                sel.value = cur;
+            });
+        }
+
+        function displayServices() {
+            const tb = document.getElementById('servicesTableBody');
+            tb.innerHTML = '';
+            data.services.forEach(s=>{
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${s.id}</td>
+                    <td>${s.name}</td>
+                    <td>${s.category}</td>
+                    <td>${s.price.toFixed(2)} €</td>
+                    <td>${s.vat}%</td>
+                    <td class="actions">
+                        <button class="btn btn-primary btn-icon btn-sm" onclick="editService('${s.id}')">✏️</button>
+                        <button class="btn btn-danger btn-icon btn-sm" onclick="deleteService('${s.id}')">🗑️</button>
+                    </td>
+                `;
+                tb.appendChild(tr);
+            });
+        }
+
+        function displayParts() {
+            const tb = document.getElementById('partsTableBody');
+            tb.innerHTML = '';
+            if (!data.parts || data.parts.length === 0) {
+                tb.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#9ca3af;">Aucune pièce enregistrée</td></tr>';
+                return;
+            }
+            data.parts.forEach(p=>{
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${p.id}</td>
+                    <td>${p.name}</td>
+                    <td>${p.ref || ''}</td>
+                    <td>${p.stock !== undefined ? p.stock : ''}</td>
+                    <td>${p.price.toFixed(2)} €</td>
+                    <td>${p.vat}%</td>
+                    <td>${p.location || ''}</td>
+                    <td class="actions">
+                        <button class="btn btn-primary btn-icon btn-sm" onclick="editPart('${p.id}')">✏️</button>
+                        <button class="btn btn-danger btn-icon btn-sm" onclick="deletePart('${p.id}')">🗑️</button>
+                    </td>
+                `;
+                tb.appendChild(tr);
+            });
+        }
+
+        function showAddServiceModal() {
+            const name = prompt('Nom du service:');
+            if (!name) return;
+            const category = prompt('Catégorie:') || 'Service';
+            const price = parseFloat(prompt('Prix HT:') || '0');
+            const vat = parseFloat(prompt('TVA % (20,10,5.5,0):') || '20');
+            const s = { id: 'SRV' + String(data.services.length+1).padStart(3,'0'), name, category, price, vat };
+            data.services.push(s);
+            saveData();
+            displayServices();
+            updateServiceSelects();
+            showNotification('Service ajouté !','success');
+        }
+
+        function showAddPartModal() {
+            const name = prompt('Nom de la pièce:');
+            if (!name) return;
+            const ref = prompt('Référence:') || '';
+            const stock = parseInt(prompt('Stock disponible:') || '0', 10);
+            const price = parseFloat(prompt('Prix HT:') || '0');
+            const vat = parseFloat(prompt('TVA % (20,10,5.5,0):') || '20');
+            const location = prompt('Emplacement (optionnel):') || '';
+            const p = {
+                id: 'PCE' + String(data.settings.counters.part++).padStart(3,'0'),
+                name, ref, stock, price, vat, location
+            };
+            data.parts.push(p);
+            saveData();
+            displayParts();
+            updatePartsSelects();
+            showNotification('Pièce ajoutée !','success');
+        }
+
+        function editService(id) {
+            const s = data.services.find(x=>x.id===id);
+            if (!s) return;
+            const name = prompt('Nom du service:', s.name);
+            if (!name) return;
+            s.name = name;
+            s.category = prompt('Catégorie:', s.category) || 'Service';
+            s.price = parseFloat(prompt('Prix HT:', s.price) || '0');
+            s.vat = parseFloat(prompt('TVA %:', s.vat) || '20');
+            saveData();
+            displayServices();
+            updateServiceSelects();
+            showNotification('Service modifié !','success');
+        }
+
+        function editPart(id) {
+            const p = data.parts.find(x=>x.id===id);
+            if (!p) return;
+            const name = prompt('Nom de la pièce:', p.name);
+            if (!name) return;
+            p.name = name;
+            p.ref = prompt('Référence:', p.ref || '') || '';
+            p.stock = parseInt(prompt('Stock disponible:', p.stock || 0) || '0', 10);
+            p.price = parseFloat(prompt('Prix HT:', p.price) || '0');
+            p.vat = parseFloat(prompt('TVA %:', p.vat) || '20');
+            p.location = prompt('Emplacement:', p.location || '') || '';
+            saveData();
+            displayParts();
+            updatePartsSelects();
+            showNotification('Pièce modifiée !','success');
+        }
+
+        function deleteService(id) {
+            if (!confirm('Supprimer ce service ?')) return;
+            data.services = data.services.filter(s=>s.id!==id);
+            saveData();
+            displayServices();
+            updateServiceSelects();
+            showNotification('Service supprimé !','success');
+        }
+
+        function deletePart(id) {
+            if (!confirm('Supprimer cette pièce ?')) return;
+            data.parts = data.parts.filter(p=>p.id!==id);
+            saveData();
+            displayParts();
+            updatePartsSelects();
+            showNotification('Pièce supprimée !','success');
+        }
+
+        function displayDocuments() {
+            const c = document.getElementById('documentsList');
+            c.innerHTML = '';
+            const docs = [];
+            data.quotes.forEach(q=>docs.push({type:'quote',...q}));
+            data.invoices.forEach(i=>docs.push({type:'invoice',...i}));
+            docs.sort((a,b)=> new Date(b.date)-new Date(a.date));
+            if (docs.length===0) {
+                c.innerHTML = '<p style="text-align:center;color:#9ca3af;">Aucun document trouvé</p>';
+                return;
+            }
+            docs.forEach(d=>{
+                const card = document.createElement('div');
+                card.className = 'document-card';
+                card.innerHTML = `
+                    <div class="document-header">
+                        <span class="document-number">${d.type==='quote'?'📝':'💰'} ${d.number}</span>
+                        <span class="document-status status-${d.status||'draft'}">${getStatusLabel(d.status)}</span>
+                    </div>
+                    <div class="document-info">
+                        <strong>${d.client||'Client non défini'}</strong><br>
+                        Date: ${formatDate(d.date)}<br>
+                        Total: ${(d.totalTTC||0).toFixed(2)} € TTC
+                    </div>
+                    <div class="document-actions">
+                        <button class="btn btn-primary btn-sm" onclick="viewDocument('${d.type}','${d.number}')">👁️ Voir</button>
+                        <button class="btn btn-warning btn-sm" onclick="editDocument('${d.type}','${d.number}')">✏️ Modifier</button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteDocument('${d.type}','${d.number}')">🗑️ Supprimer</button>
+                    </div>
+                `;
+                c.appendChild(card);
+            });
+        }
+
+        function viewDocument(type, number) {
+            const list = type==='quote' ? data.quotes : data.invoices;
+            const doc = list.find(d=>d.number===number);
+            if (!doc) return;
+            generateDocumentPreview(doc, type);
+            document.getElementById('previewModal').classList.add('active');
+        }
+
+        function editDocument(type, number) {
+            const list = type==='quote' ? data.quotes : data.invoices;
+            const doc = list.find(d=>d.number===number);
+            if (!doc) { showNotification('Document introuvable','error'); return; }
+            currentEdit = { type, number };
+            loadDocumentToForm(type, doc);
+            const btn = document.querySelector(`.tab-button[onclick*="${type}"]`);
+            if (btn) btn.click();
+            showNotification('Document chargé pour modification.','success');
+        }
+
+        function loadDocumentToForm(type, doc) {
+            if (type === 'quote') {
+                document.getElementById('quoteNumber').value = doc.number;
+                document.getElementById('quoteDate').value = doc.date;
+                document.getElementById('quoteClient').value = doc.client || '';
+                document.getElementById('quoteClientEmail').value = doc.clientEmail || '';
+                document.getElementById('quoteClientPhone').value = doc.clientPhone || '';
+                document.getElementById('quoteClientAddress').value = doc.clientAddress || '';
+                document.getElementById('quoteValidity').value = doc.validity || 30;
+                document.getElementById('quoteInternalNotes').value = doc.internalNotes || '';
+                document.getElementById('quotePublicNotes').value = doc.publicNotes || '';
+                const tbody = document.getElementById('quoteServicesTable');
+                tbody.innerHTML = '';
+                (doc.services||[]).forEach(s=>{
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>
+                            <select class="service-select" onchange="updateServicePrice(this,'quote')">
+                                <option value="">Sélectionner un service</option>
+                                ${data.services.map(serv=>`<option value="${serv.id}" data-price="${serv.price}" data-vat="${serv.vat}" ${serv.name===s.name?'selected':''}>${serv.name}</option>`).join('')}
+                            </select>
+                        </td>
+                        <td><input type="number" value="${s.qty}" min="1" onchange="calculateRow(this)"></td>
+                        <td><input type="number" step="0.01" value="${s.price}" onchange="calculateRow(this)"></td>
+                        <td>
+                            <select onchange="calculateRow(this)">
+                                <option value="20" ${s.vat==20?'selected':''}>20%</option>
+                                <option value="10" ${s.vat==10?'selected':''}>10%</option>
+                                <option value="5.5" ${s.vat==5.5?'selected':''}>5.5%</option>
+                                <option value="0" ${s.vat==0?'selected':''}>0%</option>
+                            </select>
+                        </td>
+                        <td><input type="number" step="0.01" value="${s.totalHT.toFixed(2)}" readonly></td>
+                        <td class="actions"><button class="btn btn-danger btn-icon btn-sm" onclick="removeServiceRow(this)">🗑️</button></td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+                const pbody = document.getElementById('quotePartsTable');
+                pbody.innerHTML = '';
+                (doc.parts||[]).forEach(p=>{
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>
+                            <select class="part-select" onchange="updatePartPrice(this,'quote')">
+                                <option value="">Sélectionner une pièce</option>
+                                ${data.parts.map(pp=>`<option value="${pp.id}" data-price="${pp.price}" data-vat="${pp.vat}" ${pp.name===p.name?'selected':''}>${pp.name} (stock: ${pp.stock||0})</option>`).join('')}
+                            </select>
+                        </td>
+                        <td><input type="number" value="${p.qty}" min="1" onchange="calculateRow(this)"></td>
+                        <td><input type="number" step="0.01" value="${p.price}" onchange="calculateRow(this)"></td>
+                        <td>
+                            <select onchange="calculateRow(this)">
+                                <option value="20" ${p.vat==20?'selected':''}>20%</option>
+                                <option value="10" ${p.vat==10?'selected':''}>10%</option>
+                                <option value="5.5" ${p.vat==5.5?'selected':''}>5.5%</option>
+                                <option value="0" ${p.vat==0?'selected':''}>0%</option>
+                            </select>
+                        </td>
+                        <td><input type="number" step="0.01" value="${p.totalHT.toFixed(2)}" readonly></td>
+                        <td class="actions"><button class="btn btn-danger btn-icon btn-sm" onclick="removeServiceRow(this)">🗑️</button></td>
+                    `;
+                    pbody.appendChild(tr);
+                });
+                document.getElementById('quoteTotalHT').textContent = (doc.totalHT||0).toFixed(2)+' €';
+                document.getElementById('quoteTotalTVA').textContent = (doc.totalTVA||0).toFixed(2)+' €';
+                document.getElementById('quoteTotalTTC').textContent = (doc.totalTTC||0).toFixed(2)+' €';
+            } else {
+                document.getElementById('invoiceNumber').value = doc.number;
+                document.getElementById('invoiceDate').value = doc.date;
+                document.getElementById('invoiceDueDate').value = doc.dueDate || '';
+                document.getElementById('invoiceClient').value = doc.client || '';
+                document.getElementById('invoiceClientEmail').value = doc.clientEmail || '';
+                document.getElementById('invoiceClientPhone').value = doc.clientPhone || '';
+                document.getElementById('invoiceClientAddress').value = doc.clientAddress || '';
+                document.getElementById('paymentMethod').value = doc.paymentMethod || 'Virement bancaire';
+                document.getElementById('paymentStatus').value = doc.paymentStatus || 'pending';
+                const tbody = document.getElementById('invoiceServicesTable');
+                tbody.innerHTML = '';
+                (doc.services||[]).forEach(s=>{
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>
+                            <select class="service-select" onchange="updateServicePrice(this,'invoice')">
+                                <option value="">Sélectionner un service</option>
+                                ${data.services.map(serv=>`<option value="${serv.id}" data-price="${serv.price}" data-vat="${serv.vat}" ${serv.name===s.name?'selected':''}>${serv.name}</option>`).join('')}
+                            </select>
+                        </td>
+                        <td><input type="number" value="${s.qty}" min="1" onchange="calculateRow(this)"></td>
+                        <td><input type="number" step="0.01" value="${s.price}" onchange="calculateRow(this)"></td>
+                        <td>
+                            <select onchange="calculateRow(this)">
+                                <option value="20" ${s.vat==20?'selected':''}>20%</option>
+                                <option value="10" ${s.vat==10?'selected':''}>10%</option>
+                                <option value="5.5" ${s.vat==5.5?'selected':''}>5.5%</option>
+                                <option value="0" ${s.vat==0?'selected':''}>0%</option>
+                            </select>
+                        </td>
+                        <td><input type="number" step="0.01" value="${s.totalHT.toFixed(2)}" readonly></td>
+                        <td class="actions"><button class="btn btn-danger btn-icon btn-sm" onclick="removeServiceRow(this)">🗑️</button></td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+                const pbody = document.getElementById('invoicePartsTable');
+                pbody.innerHTML = '';
+                (doc.parts||[]).forEach(p=>{
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>
+                            <select class="part-select" onchange="updatePartPrice(this,'invoice')">
+                                <option value="">Sélectionner une pièce</option>
+                                ${data.parts.map(pp=>`<option value="${pp.id}" data-price="${pp.price}" data-vat="${pp.vat}" ${pp.name===p.name?'selected':''}>${pp.name} (stock: ${pp.stock||0})</option>`).join('')}
+                            </select>
+                        </td>
+                        <td><input type="number" value="${p.qty}" min="1" onchange="calculateRow(this)"></td>
+                        <td><input type="number" step="0.01" value="${p.price}" onchange="calculateRow(this)"></td>
+                        <td>
+                            <select onchange="calculateRow(this)">
+                                <option value="20" ${p.vat==20?'selected':''}>20%</option>
+                                <option value="10" ${p.vat==10?'selected':''}>10%</option>
+                                <option value="5.5" ${p.vat==5.5?'selected':''}>5.5%</option>
+                                <option value="0" ${p.vat==0?'selected':''}>0%</option>
+                            </select>
+                        </td>
+                        <td><input type="number" step="0.01" value="${p.totalHT.toFixed(2)}" readonly></td>
+                        <td class="actions"><button class="btn btn-danger btn-icon btn-sm" onclick="removeServiceRow(this)">🗑️</button></td>
+                    `;
+                    pbody.appendChild(tr);
+                });
+                document.getElementById('invoiceTotalHT').textContent = (doc.totalHT||0).toFixed(2)+' €';
+                document.getElementById('invoiceTotalTVA').textContent = (doc.totalTVA||0).toFixed(2)+' €';
+                document.getElementById('invoiceTotalTTC').textContent = (doc.totalTTC||0).toFixed(2)+' €';
+            }
+        }
+
+        function deleteDocument(type, number) {
+            if (!confirm('Supprimer ce document ?')) return;
+            if (type === 'invoice') {
+                const inv = data.invoices.find(i => i.number === number);
+                if (inv && inv.status === 'final') {
+                    adjustStockForInvoiceParts(inv, +1);
+                }
+            }
+            if (type==='quote') data.quotes = data.quotes.filter(q=>q.number!==number);
+            else data.invoices = data.invoices.filter(i=>i.number!==number);
+            saveData();
+            displayDocuments();
+            updateDashboard();
+            updateQuoteConversionSelect();
+            displayParts();
+            updatePartsSelects();
+            showNotification('Document supprimé !','success');
+        }
+
+        function searchClients() {
+            const term = document.getElementById('clientSearch').value.toLowerCase();
+            displayClients();
+            if (!term) return;
+            document.querySelectorAll('#clientsList .document-card').forEach(c=>{
+                c.style.display = c.textContent.toLowerCase().includes(term)?'block':'none';
+            });
+        }
+
+        function searchServices() {
+            const term = document.getElementById('serviceSearch').value.toLowerCase();
+            displayServices();
+            if (!term) return;
+            document.querySelectorAll('#servicesTableBody tr').forEach(r=>{
+                r.style.display = r.textContent.toLowerCase().includes(term)?'':'none';
+            });
+        }
+
+        function searchParts() {
+            const term = document.getElementById('partSearch').value.toLowerCase();
+            displayParts();
+            if (!term) return;
+            document.querySelectorAll('#partsTableBody tr').forEach(r=>{
+                r.style.display = r.textContent.toLowerCase().includes(term)?'':'none';
+            });
+        }
+
+        function searchDocuments() {
+            const term = document.getElementById('documentSearch').value.toLowerCase();
+            displayDocuments();
+            if (!term) return;
+            document.querySelectorAll('#documentsList .document-card').forEach(c=>{
+                c.style.display = c.textContent.toLowerCase().includes(term)?'block':'none';
+            });
+        }
+
+        function filterDocuments() {
+            const f = document.getElementById('documentFilter').value;
+            displayDocuments();
+            if (f==='all') return;
+            document.querySelectorAll('#documentsList .document-card').forEach(card=>{
+                const isQuote = card.innerHTML.includes('📝');
+                const isInvoice = card.innerHTML.includes('💰');
+                const status = card.querySelector('.document-status').className;
+                let show = false;
+                if (f==='quotes') show = isQuote;
+                else if (f==='invoices') show = isInvoice;
+                else if (f==='draft') show = status.includes('draft');
+                else if (f==='sent') show = status.includes('sent');
+                else if (f==='paid') show = status.includes('paid');
+                card.style.display = show ? 'block' : 'none';
+            });
+        }
+
+        function generateDocumentNumbers() {
+            const year = new Date().getFullYear();
+            const month = String(new Date().getMonth()+1).padStart(2,'0');
+            document.getElementById('quoteNumber').value = `DEV-${year}${month}-${String(data.settings.counters.quote).padStart(4,'0')}`;
+            document.getElementById('invoiceNumber').value = `FAC-${year}${month}-${String(data.settings.counters.invoice).padStart(4,'0')}`;
+        }
+
+        function addServiceRow(type) {
+            const table = document.getElementById(type+'ServicesTable');
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>
+                    <select class="service-select" onchange="updateServicePrice(this,'${type}')">
+                        <option value="">Sélectionner un service</option>
+                        ${data.services.map(s=>`<option value="${s.id}" data-price="${s.price}" data-vat="${s.vat}">${s.name}</option>`).join('')}
+                    </select>
+                </td>
+                <td><input type="number" value="1" min="1" onchange="calculateRow(this)"></td>
+                <td><input type="number" step="0.01" value="0" onchange="calculateRow(this)"></td>
+                <td>
+                    <select onchange="calculateRow(this)">
+                        <option value="20">20%</option>
+                        <option value="10">10%</option>
+                        <option value="5.5">5.5%</option>
+                        <option value="0">0%</option>
+                    </select>
+                </td>
+                <td><input type="number" step="0.01" value="0" readonly></td>
+                <td class="actions"><button class="btn btn-danger btn-icon btn-sm" onclick="removeServiceRow(this)">🗑️</button></td>
+            `;
+            table.appendChild(tr);
+        }
+
+        function addPartRow(type) {
+            const table = document.getElementById(type+'PartsTable');
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>
+                    <select class="part-select" onchange="updatePartPrice(this,'${type}')">
+                        <option value="">Sélectionner une pièce</option>
+                        ${data.parts.map(p=>`<option value="${p.id}" data-price="${p.price}" data-vat="${p.vat}">${p.name} (stock: ${p.stock||0})</option>`).join('')}
+                    </select>
+                </td>
+                <td><input type="number" value="1" min="1" onchange="calculateRow(this)"></td>
+                <td><input type="number" step="0.01" value="0" onchange="calculateRow(this)"></td>
+                <td>
+                    <select onchange="calculateRow(this)">
+                        <option value="20">20%</option>
+                        <option value="10">10%</option>
+                        <option value="5.5">5.5%</option>
+                        <option value="0">0%</option>
+                    </select>
+                </td>
+                <td><input type="number" step="0.01" value="0" readonly></td>
+                <td class="actions"><button class="btn btn-danger btn-icon btn-sm" onclick="removeServiceRow(this)">🗑️</button></td>
+            `;
+            table.appendChild(tr);
+        }
+
+        function removeServiceRow(btn) {
+            const row = btn.closest('tr');
+            const tbody = row.parentElement;
+            if (tbody.children.length>0) {
+                row.remove();
+                const panelId = tbody.closest('.panel').id;
+                const type = panelId.replace('-panel','');
+                calculateTotals(type);
+            } else {
+                showNotification('Il faut au moins une ligne.','error');
+            }
+        }
+
+        function updateServicePrice(sel, type) {
+            const opt = sel.selectedOptions[0];
+            const row = sel.closest('tr');
+            const priceInput = row.cells[2].querySelector('input');
+            const vatSelect = row.cells[3].querySelector('select');
+            if (opt && opt.dataset.price) {
+                priceInput.value = opt.dataset.price;
+                vatSelect.value = opt.dataset.vat || '20';
+            }
+            calculateRow(sel);
+        }
+
+        function updatePartPrice(sel, type) {
+            const opt = sel.selectedOptions[0];
+            const row = sel.closest('tr');
+            const priceInput = row.cells[2].querySelector('input');
+            const vatSelect = row.cells[3].querySelector('select');
+            if (opt && opt.dataset.price) {
+                priceInput.value = opt.dataset.price;
+                vatSelect.value = opt.dataset.vat || '20';
+            }
+            calculateRow(sel);
+        }
+
+        function calculateRow(el) {
+            const row = el.closest('tr');
+            const qty = parseFloat(row.cells[1].querySelector('input').value) || 0;
+            const price = parseFloat(row.cells[2].querySelector('input').value) || 0;
+            const total = qty * price;
+            row.cells[4].querySelector('input').value = total.toFixed(2);
+            const panelId = row.closest('.panel').id;
+            const type = panelId.replace('-panel','');
+            calculateTotals(type);
+        }
+
+        function calculateTotals(type) {
+            let totalHT = 0;
+            let totalTVA = 0;
+
+            function addFromTable(tableId) {
+                const rows = document.getElementById(tableId);
+                if (!rows) return;
+                for (let row of rows.getElementsByTagName('tr')) {
+                    const qtyEl = row.cells[1]?.querySelector('input');
+                    if (!qtyEl) continue;
+                    const qty = parseFloat(qtyEl.value) || 0;
+                    const price = parseFloat(row.cells[2].querySelector('input').value) || 0;
+                    const vat = parseFloat(row.cells[3].querySelector('select').value) || 0;
+                    const lineHT = qty * price;
+                    totalHT += lineHT;
+                    totalTVA += lineHT * (vat/100);
+                }
+            }
+
+            addFromTable(type+'ServicesTable');
+            addFromTable(type+'PartsTable');
+
+            const totalTTC = totalHT + totalTVA;
+            document.getElementById(type+'TotalHT').textContent = totalHT.toFixed(2)+' €';
+            document.getElementById(type+'TotalTVA').textContent = totalTVA.toFixed(2)+' €';
+            document.getElementById(type+'TotalTTC').textContent = totalTTC.toFixed(2)+' €';
+        }
+
+        function collectDocumentData(type) {
+            const services = [];
+            const parts = [];
+
+            function collectFromTable(tableId, targetArray, isPart=false) {
+                const tbody = document.getElementById(tableId);
+                if (!tbody) return;
+                for (let row of tbody.getElementsByTagName('tr')) {
+                    const sel = row.cells[0]?.querySelector('select');
+                    if (!sel) continue;
+                    const opt = sel.selectedOptions[0];
+                    if (!opt || !opt.value) continue;
+                    targetArray.push({
+                        id: opt.value,
+                        name: isPart ? opt.text.replace(/\s*\(stock:[^)]+\)\s*$/,'') : opt.text,
+                        qty: parseFloat(row.cells[1].querySelector('input').value)||0,
+                        price: parseFloat(row.cells[2].querySelector('input').value)||0,
+                        vat: parseFloat(row.cells[3].querySelector('select').value)||0,
+                        totalHT: parseFloat(row.cells[4].querySelector('input').value)||0
+                    });
+                }
+            }
+
+            collectFromTable(type+'ServicesTable', services, false);
+            collectFromTable(type+'PartsTable', parts, true);
+
+            const totalHT = parseFloat(document.getElementById(type+'TotalHT').textContent)||0;
+            const totalTVA = parseFloat(document.getElementById(type+'TotalTVA').textContent)||0;
+            const totalTTC = parseFloat(document.getElementById(type+'TotalTTC').textContent)||0;
+            const doc = {
+                number: document.getElementById(type+'Number').value,
+                date: document.getElementById(type+'Date').value,
+                client: document.getElementById(type+'Client').value,
+                clientEmail: document.getElementById(type+'ClientEmail').value,
+                clientPhone: document.getElementById(type+'ClientPhone').value,
+                clientAddress: document.getElementById(type+'ClientAddress').value,
+                services,
+                parts,
+                totalHT, totalTVA, totalTTC,
+                createdAt: new Date().toISOString()
+            };
+            if (type==='quote') {
+                doc.validity = document.getElementById('quoteValidity').value;
+                doc.internalNotes = document.getElementById('quoteInternalNotes').value;
+                doc.publicNotes = document.getElementById('quotePublicNotes').value;
+            } else {
+                doc.dueDate = document.getElementById('invoiceDueDate').value;
+                doc.paymentMethod = document.getElementById('paymentMethod').value;
+                doc.paymentStatus = document.getElementById('paymentStatus').value;
+            }
+            return doc;
+        }
+
+        function adjustStockForInvoiceParts(invoice, direction) {
+            if (!invoice || !invoice.parts) return;
+            invoice.parts.forEach(partLine => {
+                const p = data.parts.find(x => x.id === partLine.id);
+                if (p) {
+                    const current = typeof p.stock === 'number' ? p.stock : 0;
+                    p.stock = current + direction * (partLine.qty || 0);
+                }
+            });
+            displayParts();
+            updatePartsSelects();
+        }
+
+        function saveDocument(type, status) {
+            const docData = collectDocumentData(type);
+            docData.status = status;
+
+            if (currentEdit.type === type && currentEdit.number === docData.number) {
+                if (type === 'quote') {
+                    const idx = data.quotes.findIndex(q=>q.number===docData.number);
+                    if (idx !== -1) data.quotes[idx] = docData;
+                } else {
+                    const idx = data.invoices.findIndex(i=>i.number===docData.number);
+                    if (idx !== -1) {
+                        const oldInv = data.invoices[idx];
+                        if (oldInv.status === 'final') {
+                            adjustStockForInvoiceParts(oldInv, +1);
+                        }
+                        if (status === 'final') {
+                            adjustStockForInvoiceParts(docData, -1);
+                        }
+                        data.invoices[idx] = docData;
+                    }
+                }
+                saveData();
+                currentEdit = { type: null, number: null };
+                showNotification((type==='quote'?'Devis':'Facture')+' mis à jour avec succès !','success');
+            } else {
+                if (type === 'quote') {
+                    data.quotes.push(docData);
+                    data.settings.counters.quote++;
+                    updateQuoteConversionSelect();
+                } else {
+                    if (status === 'final') {
+                        adjustStockForInvoiceParts(docData, -1);
+                    }
+                    data.invoices.push(docData);
+                    data.settings.counters.invoice++;
+                }
+                saveData();
+                generateDocumentNumbers();
+                showNotification((type==='quote'?'Devis':'Facture')+' '+(status==='draft'?'enregistré comme brouillon':'finalisé')+' avec succès !','success');
+            }
+
+            resetForm(type);
+            displayDocuments();
+            updateDashboard();
+        }
+
+        function resetForm(type) {
+            currentEdit = { type: null, number: null };
+            const panel = document.getElementById(type+'-panel');
+            panel.querySelectorAll('input[type="text"], input[type="email"], input[type="tel"], textarea').forEach(inp=>{
+                if (!inp.readOnly) inp.value = '';
+            });
+            const table = document.getElementById(type+'ServicesTable');
+            table.innerHTML = `
+                <tr>
+                    <td>
+                        <select class="service-select" onchange="updateServicePrice(this,'${type}')">
+                            <option value="">Sélectionner un service</option>
+                            ${data.services.map(s=>`<option value="${s.id}" data-price="${s.price}" data-vat="${s.vat}">${s.name}</option>`).join('')}
+                        </select>
+                    </td>
+                    <td><input type="number" value="1" min="1" onchange="calculateRow(this)"></td>
+                    <td><input type="number" step="0.01" value="0" onchange="calculateRow(this)"></td>
+                    <td>
+                        <select onchange="calculateRow(this)">
+                            <option value="20">20%</option>
+                            <option value="10">10%</option>
+                            <option value="5.5">5.5%</option>
+                            <option value="0">0%</option>
+                        </select>
+                    </td>
+                    <td><input type="number" step="0.01" value="0" readonly></td>
+                    <td class="actions"><button class="btn btn-danger btn-icon btn-sm" onclick="removeServiceRow(this)">🗑️</button></td>
+                </tr>
+            `;
+            const ptable = document.getElementById(type+'PartsTable');
+            if (ptable) ptable.innerHTML = '';
+            calculateTotals(type);
+            if (type==='invoice') document.getElementById('convertFromQuote').value = '';
+            generateDocumentNumbers();
+        }
+
+        function previewDocument(type) {
+            const d = collectDocumentData(type);
+            generateDocumentPreview(d, type);
+            document.getElementById('previewModal').classList.add('active');
+        }
+
+        function generateDocumentPreview(doc, type) {
+            const title = type==='quote' ? 'DEVIS' : 'FACTURE';
+            const settings = data.settings.company;
+            const servicesHTML = (doc.services||[]).map(s=>`
+                <tr>
+                    <td>${s.name}</td>
+                    <td style="text-align:center;">${s.qty}</td>
+                    <td style="text-align:right;">${s.price.toFixed(2)} €</td>
+                    <td style="text-align:center;">${s.vat}%</td>
+                    <td style="text-align:right;">${s.totalHT.toFixed(2)} €</td>
+                </tr>
+            `).join('');
+            const partsHTML = (doc.parts||[]).map(p=>`
+                <tr>
+                    <td>${p.name}</td>
+                    <td style="text-align:center;">${p.qty}</td>
+                    <td style="text-align:right;">${p.price.toFixed(2)} €</td>
+                    <td style="text-align:center;">${p.vat}%</td>
+                    <td style="text-align:right;">${p.totalHT.toFixed(2)} €</td>
+                </tr>
+            `).join('');
+            const html = `
+                <div class="invoice-preview" style="background:#111827;color:#e5e7eb;">
+                    <div class="invoice-header">
+                        <div style="display:flex;flex-direction:column;align-items:flex-start;gap:10px;">
+                            <img src="https://i.ibb.co/wFpT2SmJ/4933f2d3e9fa.png" alt="ExpectoCore Logo" style="height:280px;width:auto;">
+                            <p style="margin:2px 0;">${settings.address||''}</p>
+                            <p style="margin:2px 0;">${settings.zip||''} ${settings.city||''}</p>
+                            <p style="margin:2px 0;">${settings.country}</p>
+                            <p style="margin:2px 0;">📧 ${settings.email||''}</p>
+                            <p style="margin:2px 0;">📞 ${settings.phone||''}</p>
+                        </div>
+                        <div style="text-align:right;">
+                            <h2 style="color:#e5e7eb;">${title}</h2>
+                            <p style="font-size:20px;font-weight:bold;">${doc.number}</p>
+                            <p>Date: ${formatDate(doc.date)}</p>
+                            ${type==='quote'
+                                ? `<p>Validité: ${doc.validity} jours</p>`
+                                : `<p>Échéance: ${formatDate(doc.dueDate)}</p>`
+                            }
+                        </div>
+                    </div>
+                    <div class="invoice-details">
+                        <div>
+                            <h3>Émetteur</h3>
+                            <p><strong>${settings.name}</strong></p>
+                            ${settings.siret ? `<p>SIRET: ${settings.siret}</p>` : ''}
+                            ${settings.vat ? `<p>TVA: ${settings.vat}</p>` : ''}
+                        </div>
+                        <div>
+                            <h3>Client</h3>
+                            <p><strong>${doc.client || 'Non spécifié'}</strong></p>
+                            <p>${doc.clientAddress || ''}</p>
+                            <p>📧 ${doc.clientEmail || ''}</p>
+                            <p>📞 ${doc.clientPhone || ''}</p>
+                        </div>
+                    </div>
+                    <table class="invoice-table">
+                        <thead>
+                            <tr>
+                                <th>Description</th>
+                                <th style="text-align:center;">Qté</th>
+                                <th style="text-align:right;">Prix unit. HT</th>
+                                <th style="text-align:center;">TVA</th>
+                                <th style="text-align:right;">Total HT</th>
+                            </tr>
+                        </thead>
+                        <tbody>${servicesHTML}</tbody>
+                    </table>
+                    ${partsHTML ? `
+                    <h3 style="margin-top:20px;">Pièces</h3>
+                    <table class="invoice-table">
+                        <thead>
+                            <tr>
+                                <th>Description</th>
+                                <th style="text-align:center;">Qté</th>
+                                <th style="text-align:right;">Prix unit. HT</th>
+                                <th style="text-align:center;">TVA</th>
+                                <th style="text-align:right;">Total HT</th>
+                            </tr>
+                        </thead>
+                        <tbody>${partsHTML}</tbody>
+                    </table>` : ''}
+                    <table class="invoice-table">
+                        <tfoot>
+                            <tr><td colspan="4" style="text-align:right;"><strong>Total HT:</strong></td><td style="text-align:right;"><strong>${doc.totalHT.toFixed(2)} €</strong></td></tr>
+                            <tr><td colspan="4" style="text-align:right;"><strong>TVA:</strong></td><td style="text-align:right;"><strong>${doc.totalTVA.toFixed(2)} €</strong></td></tr>
+                            <tr style="font-size:18px;background:#1f2937;"><td colspan="4" style="text-align:right;"><strong>Total TTC:</strong></td><td style="text-align:right;color:#10b981;"><strong>${doc.totalTTC.toFixed(2)} €</strong></td></tr>
+                        </tfoot>
+                    </table>
+                    ${doc.publicNotes ? `<div style="margin-top:30px;padding:20px;background:#0f172a;border-radius:8px;"><h4>Notes et conditions</h4><p>${doc.publicNotes}</p></div>` : ''}
+                    ${settings.cgv ? `<div style="margin-top:20px;padding:15px;border-top:1px solid #1f2937;"><p style="font-size:12px;color:#9ca3af;">${settings.cgv}</p></div>` : ''}
+                    <div class="signature-area">
+                        <div class="signature-box"><p>Signature ${settings.name}</p></div>
+                        <div class="signature-box"><p>Signature Client</p></div>
+                    </div>
+                    <div class="invoice-footer">
+                        <p style="text-align:center;font-size:12px;color:#9ca3af;">${settings.legalMentions || ''}</p>
+                    </div>
+                </div>
+            `;
+            document.getElementById('previewTitle').textContent = `Aperçu ${title} ${doc.number}`;
+            document.getElementById('previewBody').innerHTML = html;
+        }
+
+        function closeModal() { document.getElementById('previewModal').classList.remove('active'); }
+        function printDocument() { window.print(); }
+
+        function downloadPDF() {
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF('p','mm','a4');
+            const el = document.getElementById('previewBody');
+            html2canvas(el).then(canvas=>{
+                const imgData = canvas.toDataURL('image/png');
+                const imgProps = pdf.getImageProperties(imgData);
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+                pdf.addImage(imgData,'PNG',0,0,pdfWidth,pdfHeight);
+                pdf.save('document.pdf');
+                showNotification('PDF généré !','success');
+            }).catch(()=>{
+                showNotification('Erreur PDF','error');
+            });
+        }
+
+        function generateNativePDF(docData, type) {
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF('p','mm','a4');
+            const settings = data.settings.company;
+            const pageWidth = pdf.internal.pageSize.getWidth();
+            const logoUrl = 'https://i.ibb.co/wFpT2SmJ/4933f2d3e9fa.png';
+            const img = new Image();
+            img.crossOrigin = 'Anonymous';
+            img.onload = function() {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width; canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img,0,0);
+                const dataURL = canvas.toDataURL('image/png');
+                const logoHeight = 70;
+                const logoWidth = (img.width * logoHeight) / img.height;
+                pdf.addImage(dataURL,'PNG',20,10,logoWidth,logoHeight);
+                pdf.setFontSize(18); pdf.setFont(undefined,'bold'); pdf.setTextColor(15,23,42);
+                const docType = type==='quote' ? 'DEVIS' : 'FACTURE';
+                pdf.text(docType, pageWidth-50, 20);
+                pdf.setFontSize(12); pdf.setTextColor(0,0,0); pdf.setFont(undefined,'normal');
+                pdf.text(docData.number, pageWidth-50, 27);
+                pdf.text('Date: ' + formatDate(docData.date), pageWidth-50, 34);
+                pdf.setFontSize(10);
+                let yPos = 10 + logoHeight + 15;
+                pdf.text('Émetteur:', 20, yPos);
+                yPos += 7;
+                pdf.setFont(undefined,'bold'); pdf.text(settings.name,20,yPos);
+                pdf.setFont(undefined,'normal'); yPos += 5; pdf.text(settings.address,20,yPos);
+                yPos += 5; pdf.text(settings.zip + ' ' + settings.city,20,yPos);
+                yPos += 5; pdf.text('Tél: ' + settings.phone,20,yPos);
+                yPos += 5; pdf.text('Email: ' + settings.email,20,yPos);
+                if (settings.siret) { yPos += 5; pdf.text('SIRET: ' + settings.siret,20,yPos); }
+                if (settings.vat) { yPos += 5; pdf.text('TVA: ' + settings.vat,20,yPos); }
+                let clientY = 10 + logoHeight + 15;
+                pdf.setFont(undefined,'bold'); pdf.text('Client:', pageWidth/2, clientY);
+                clientY += 7; pdf.setFont(undefined,'normal'); pdf.text(docData.client||'Non spécifié', pageWidth/2, clientY);
+                clientY += 5; if (docData.clientAddress) { pdf.text(docData.clientAddress, pageWidth/2, clientY); clientY += 5; }
+                if (docData.clientEmail) { pdf.text('Email: '+docData.clientEmail, pageWidth/2, clientY); clientY += 5; }
+                if (docData.clientPhone) { pdf.text('Tél: '+docData.clientPhone, pageWidth/2, clientY); }
+                yPos += 15;
+                pdf.setFont(undefined,'bold'); pdf.setFillColor(226,232,240);
+                pdf.rect(20, yPos, pageWidth-40, 8, 'F');
+                pdf.text('Description',22,yPos+5);
+                pdf.text('Qté',110,yPos+5);
+                pdf.text('Prix HT',130,yPos+5);
+                pdf.text('TVA',155,yPos+5);
+                pdf.text('Total HT',175,yPos+5);
+                yPos += 10; pdf.setFont(undefined,'normal');
+                (docData.services||[]).forEach(s=>{
+                    if (yPos>260) { pdf.addPage(); yPos=20; }
+                    pdf.text(s.name,22,yPos);
+                    pdf.text(String(s.qty),112,yPos);
+                    pdf.text(s.price.toFixed(2)+' €',130,yPos);
+                    pdf.text(s.vat+' %',155,yPos);
+                    pdf.text(s.totalHT.toFixed(2)+' €',175,yPos);
+                    yPos += 7;
+                });
+                (docData.parts||[]).forEach(p=>{
+                    if (yPos>260) { pdf.addPage(); yPos=20; }
+                    pdf.text(p.name,22,yPos);
+                    pdf.text(String(p.qty),112,yPos);
+                    pdf.text(p.price.toFixed(2)+' €',130,yPos);
+                    pdf.text(p.vat+' %',155,yPos);
+                    pdf.text(p.totalHT.toFixed(2)+' €',175,yPos);
+                    yPos += 7;
+                });
+                if (yPos>240) { pdf.addPage(); yPos=20; }
+                pdf.setFont(undefined,'bold');
+                pdf.text('Total HT:',140,yPos); pdf.text(docData.totalHT.toFixed(2)+' €',175,yPos);
+                yPos += 6; pdf.text('TVA:',140,yPos); pdf.text(docData.totalTVA.toFixed(2)+' €',175,yPos);
+                yPos += 6; pdf.text('Total TTC:',140,yPos); pdf.text(docData.totalTTC.toFixed(2)+' €',175,yPos);
+                if (docData.publicNotes) {
+                    yPos += 15; pdf.setTextColor(0,0,0); pdf.setFontSize(10); pdf.setFont(undefined,'bold'); pdf.text('Notes:',20,yPos);
+                    yPos += 5; pdf.setFont(undefined,'normal');
+                    const lines = pdf.splitTextToSize(docData.publicNotes, pageWidth-40);
+                    lines.forEach(line=>{
+                        if (yPos>270) { pdf.addPage(); yPos=20; }
+                        pdf.text(line,20,yPos); yPos += 5;
+                    });
+                }
+                const pageCount = pdf.internal.getNumberOfPages();
+                for (let i=1; i<=pageCount; i++) {
+                    pdf.setPage(i);
+                    pdf.setFontSize(8); pdf.setTextColor(128,128,128);
+                    pdf.text('Page '+i+' / '+pageCount, pageWidth/2, 290, {align:'center'});
+                    if (settings.legalMentions) {
+                        const mentions = pdf.splitTextToSize(settings.legalMentions, pageWidth-40);
+                        pdf.text(mentions, pageWidth/2, 280, {align:'center'});
+                    }
+                }
+                pdf.save(docData.number+'.pdf');
+                showNotification('PDF généré et téléchargé !','success');
+            };
+            img.src = logoUrl;
+        }
+
+        function sendByEmail() {
+            const email = prompt('Entrez l\'adresse email du destinataire:');
+            if (!email) return;
+            showNotification('Document envoyé à '+email,'success');
+        }
+
+        function loadSettings() {
+            const s = data.settings.company;
+            document.getElementById('companyName').value = s.name || '';
+            document.getElementById('companySlogan').value = s.slogan || '';
+            document.getElementById('companySiret').value = s.siret || '';
+            document.getElementById('companyVAT').value = s.vat || '';
+            document.getElementById('companyAddress').value = s.address || '';
+            document.getElementById('companyZip').value = s.zip || '';
+            document.getElementById('companyCity').value = s.city || '';
+            document.getElementById('companyCountry').value = s.country || '';
+            document.getElementById('companyEmail').value = s.email || '';
+            document.getElementById('companyPhone').value = s.phone || '';
+            document.getElementById('companyWebsite').value = s.website || '';
+            document.getElementById('companyCGV').value = s.cgv || '';
+            document.getElementById('companyLegalMentions').value = s.legalMentions || '';
+        }
+
+        function saveSettings() {
+            data.settings.company = {
+                name: document.getElementById('companyName').value,
+                slogan: document.getElementById('companySlogan').value,
+                siret: document.getElementById('companySiret').value,
+                vat: document.getElementById('companyVAT').value,
+                address: document.getElementById('companyAddress').value,
+                zip: document.getElementById('companyZip').value,
+                city: document.getElementById('companyCity').value,
+                country: document.getElementById('companyCountry').value,
+                email: document.getElementById('companyEmail').value,
+                phone: document.getElementById('companyPhone').value,
+                website: document.getElementById('companyWebsite').value,
+                cgv: document.getElementById('companyCGV').value,
+                legalMentions: document.getElementById('companyLegalMentions').value
+            };
+            saveData();
+            showNotification('Paramètres sauvegardés !','success');
+        }
+
+        function exportData() {
+            const str = JSON.stringify(data, null, 2);
+            const blob = new Blob([str], {type:'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `expectocore_export_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showNotification('Données exportées !','success');
+        }
+
+        function importData() {
+            const inp = document.createElement('input');
+            inp.type = 'file';
+            inp.accept = 'application/json';
+            inp.onchange = e=>{
+                const file = e.target.files[0];
+                const reader = new FileReader();
+                reader.onload = ev=>{
+                    try {
+                        const imported = JSON.parse(ev.target.result);
+                        if (confirm('Remplacer toutes les données ?')) {
+                            data = imported;
+                            saveData();
+                            location.reload();
+                        }
+                    } catch {
+                        showNotification('Erreur import','error');
+                    }
+                };
+                reader.readAsText(file);
+            };
+            inp.click();
+        }
+
+        function generatePDFFromPreview() {
+            const title = document.getElementById('previewTitle').textContent;
+            const isQuote = title.includes('DEVIS');
+            const type = isQuote ? 'quote' : 'invoice';
+            const numMatch = title.match(/[A-Z]{3}-\d{6}-\d{4}/);
+            if (numMatch) {
+                const num = numMatch[0];
+                const list = type==='quote' ? data.quotes : data.invoices;
+                const doc = list.find(d=>d.number===num);
+                if (doc) {
+                    generateNativePDF(doc, type);
+                } else {
+                    downloadPDF();
+                }
+            } else {
+                downloadPDF();
+            }
+        }
+
+        function showNotification(msg, type='info') {
+            const n = document.createElement('div');
+            n.className = 'notification';
+            n.style.background = type==='success' ? '#10b981' :
+                                 type==='error' ? '#ef4444' :
+                                 type==='warning' ? '#f59e0b' : '#3b82f6';
+            n.textContent = msg;
+            document.body.appendChild(n);
+            setTimeout(()=>{
+                n.style.animation = 'slideOut .3s';
+                setTimeout(()=>n.remove(),300);
+            },3000);
+        }
+
+        function formatDate(date) {
+            if (!date) return '';
+            const d = new Date(date);
+            return d.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'});
+        }
+
+        function getStatusLabel(status) {
+            const labels = {
+                'draft':'Brouillon',
+                'final':'Finalisé',
+                'sent':'Envoyé',
+                'paid':'Payé',
+                'pending':'En attente',
+                'partial':'Partiel'
+            };
+            return labels[status] || status || 'Brouillon';
+        }
+
+        function updateQuoteConversionSelect() {
+            const sel = document.getElementById('convertFromQuote');
+            if (!sel) return;
+            const cur = sel.value;
+            sel.innerHTML = '<option value="">-- Aucun --</option>';
+            data.quotes.forEach(q=>{
+                sel.innerHTML += `<option value="${q.number}">${q.number} — ${q.client || 'Client'}</option>`;
+            });
+            sel.value = cur || '';
+        }
+
+        function loadQuoteData() {
+            const sel = document.getElementById('convertFromQuote');
+            const num = sel ? sel.value : '';
+            if (!num) return;
+            const quote = data.quotes.find(q=>q.number===num);
+            if (!quote) { showNotification('Devis introuvable','error'); return; }
+            document.getElementById('invoiceClient').value = quote.client || '';
+            document.getElementById('invoiceClientEmail').value = quote.clientEmail || '';
+            document.getElementById('invoiceClientPhone').value = quote.clientPhone || '';
+            document.getElementById('invoiceClientAddress').value = quote.clientAddress || '';
+            const tbody = document.getElementById('invoiceServicesTable');
+            tbody.innerHTML = '';
+            (quote.services||[]).forEach(s=>{
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>
+                        <select class="service-select" onchange="updateServicePrice(this,'invoice')">
+                            <option value="">Sélectionner un service</option>
+                            ${data.services.map(serv=>`<option value="${serv.id}" data-price="${serv.price}" data-vat="${serv.vat}" ${serv.name===s.name?'selected':''}>${serv.name}</option>`).join('')}
+                        </select>
+                    </td>
+                    <td><input type="number" value="${s.qty}" min="1" onchange="calculateRow(this)"></td>
+                    <td><input type="number" step="0.01" value="${s.price}" onchange="calculateRow(this)"></td>
+                    <td>
+                        <select onchange="calculateRow(this)">
+                            <option value="20" ${s.vat==20?'selected':''}>20%</option>
+                            <option value="10" ${s.vat==10?'selected':''}>10%</option>
+                            <option value="5.5" ${s.vat==5.5?'selected':''}>5.5%</option>
+                            <option value="0" ${s.vat==0?'selected':''}>0%</option>
+                        </select>
+                    </td>
+                    <td><input type="number" step="0.01" value="${s.totalHT.toFixed(2)}" readonly></td>
+                    <td class="actions"><button class="btn btn-danger btn-icon btn-sm" onclick="removeServiceRow(this)">🗑️</button></td>
+                `;
+                tbody.appendChild(tr);
+            });
+            const pbody = document.getElementById('invoicePartsTable');
+            pbody.innerHTML = '';
+            (quote.parts||[]).forEach(p=>{
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>
+                        <select class="part-select" onchange="updatePartPrice(this,'invoice')">
+                            <option value="">Sélectionner une pièce</option>
+                            ${data.parts.map(pp=>`<option value="${pp.id}" data-price="${pp.price}" data-vat="${pp.vat}" ${pp.name===p.name?'selected':''}>${pp.name} (stock: ${pp.stock||0})</option>`).join('')}
+                        </select>
+                    </td>
+                    <td><input type="number" value="${p.qty}" min="1" onchange="calculateRow(this)"></td>
+                    <td><input type="number" step="0.01" value="${p.price}" onchange="calculateRow(this)"></td>
+                    <td>
+                        <select onchange="calculateRow(this)">
+                            <option value="20" ${p.vat==20?'selected':''}>20%</option>
+                            <option value="10" ${p.vat==10?'selected':''}>10%</option>
+                            <option value="5.5" ${p.vat==5.5?'selected':''}>5.5%</option>
+                            <option value="0" ${p.vat==0?'selected':''}>0%</option>
+                        </select>
+                    </td>
+                    <td><input type="number" step="0.01" value="${p.totalHT.toFixed(2)}" readonly></td>
+                    <td class="actions"><button class="btn btn-danger btn-icon btn-sm" onclick="removeServiceRow(this)">🗑️</button></td>
+                `;
+                pbody.appendChild(tr);
+            });
+            document.getElementById('invoiceTotalHT').textContent = (quote.totalHT||0).toFixed(2)+' €';
+            document.getElementById('invoiceTotalTVA').textContent = (quote.totalTVA||0).toFixed(2)+' €';
+            document.getElementById('invoiceTotalTTC').textContent = (quote.totalTTC||0).toFixed(2)+' €';
+            calculateTotals('invoice');
+            showNotification('Devis importé dans la facture.','success');
+        }
+    </script>
+</body>
+</html>
