@@ -117,6 +117,7 @@
             <button class="tab-button" onclick="switchTab(event,'clients')">👥 Clients</button>
             <button class="tab-button" onclick="switchTab(event,'services')">🧰 Services</button>
             <button class="tab-button" onclick="switchTab(event,'parts')">🧩 Pièces & stocks</button>
+            <button class="tab-button" onclick="switchTab(event,'backup')">💾 Sauvegarde</button>
             <button class="tab-button" onclick="switchTab(event,'settings')">⚙️ Paramètres</button>
         </div>
 
@@ -468,6 +469,16 @@
                 </thead>
                 <tbody id="partsTableBody"></tbody>
             </table>
+        </div>
+
+        <!-- Sauvegarde -->
+        <div id="backup-panel" class="panel">
+            <h2>💾 Sauvegarde (Export / Import JSON)</h2>
+            <p style="color:#9ca3af;margin-bottom:15px;">Exportez toutes vos données (clients, services, pièces, devis, factures, paramètres) au format JSON, puis importez-les pour restaurer une sauvegarde.</p>
+            <div class="actions-section">
+                <button class="btn btn-success" onclick="exportData()">📥 Exporter (JSON)</button>
+                <button class="btn btn-primary" onclick="importData()">📤 Importer (JSON)</button>
+            </div>
         </div>
 
         <!-- Paramètres -->
