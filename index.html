@@ -1609,7 +1609,55 @@
         }
 
         function closeModal() { document.getElementById('previewModal').classList.remove('active'); }
-        function printDocument() { window.print(); }
+        function printDocument() {
+            const el = document.querySelector('#previewBody .invoice-preview');
+            if (!el) {
+                showNotification('Aucun aperçu à imprimer','error');
+                return;
+            }
+
+            const imgs = Array.from(el.querySelectorAll('img'));
+            const waitImages = Promise.all(
+                imgs.map(img => img.complete ? Promise.resolve() : new Promise(res => {
+                    img.onload = img.onerror = () => res();
+                }))
+            );
+
+            waitImages.then(() => {
+                html2canvas(el, {
+                    backgroundColor: '#ffffff',
+                    scale: 2,
+                    useCORS: true
+                }).then(canvas => {
+                    const imgData = canvas.toDataURL('image/png');
+                    const printWindow = window.open('', '_blank');
+                    printWindow.document.write(`
+                        <html>
+                          <head>
+                            <title>Impression</title>
+                            <style>
+                              @page { size: A4; margin: 0; }
+                              body { margin: 0; padding: 0; }
+                              img { width: 100%; height: auto; display: block; }
+                            </style>
+                          </head>
+                          <body>
+                            <img src="${imgData}">
+                          </body>
+                        </html>
+                    `);
+                    printWindow.document.close();
+                    printWindow.focus();
+                    printWindow.onload = function () {
+                        printWindow.print();
+                        printWindow.close();
+                    };
+                }).catch(() => {
+                    showNotification('Erreur impression','error');
+                });
+            });
+        }
+
 
         function downloadPDF() {
             const { jsPDF } = window.jspdf;
