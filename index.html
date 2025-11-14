@@ -620,14 +620,46 @@
         }
 
         function initializeDefaultParts() {
-            if (!data.parts || data.parts.length === 0) {
-                data.parts = [
-                    { id: 'PCE001', name: 'SSD 500GB', ref: 'SSD500', stock: 5, price: 55, vat: 20, location: 'Étagère A' },
-                    { id: 'PCE002', name: 'Alimentation 500W', ref: 'PSU500', stock: 3, price: 45, vat: 20, location: 'Étagère B' },
-                    { id: 'PCE003', name: 'Ventilateur 120mm', ref: 'FAN120', stock: 10, price: 8, vat: 20, location: 'Boîte ventilateurs' }
-                ];
-            }
+                if (!data.parts || data.parts.length === 0) {
+                        data.parts = [
+                                { 
+                                        id: 'PCE001', 
+                                        name: 'SSD 500GB', 
+                                        ref: 'SSD500', 
+                                        stock: 5, 
+                                        price: 55, 
+                                        vat: 20, 
+                                        location: 'Étagère A',
+                                        description: 'Disque SSD 500 Go haute vitesse pour système ou stockage.',
+                                        url: ''
+                                },
+                                { 
+                                        id: 'PCE002', 
+                                        name: 'Alimentation 500W', 
+                                        ref: 'PSU500', 
+                                        stock: 3, 
+                                        price: 45, 
+                                        vat: 20, 
+                                        location: 'Étagère B',
+                                        description: 'Bloc d’alimentation 500W pour PC fixe.',
+                                        url: ''
+                                },
+                                { 
+                                        id: 'PCE003', 
+                                        name: 'Ventilateur 120mm', 
+                                        ref: 'FAN120', 
+                                        stock: 10, 
+                                        price: 8, 
+                                        vat: 20, 
+                                        location: 'Boîte ventilateurs',
+                                        description: 'Ventilateur 120 mm pour boîtier ou radiateur.',
+                                        url: ''
+                                }
+                        ];
+                }
         }
+
+
 
         function switchTab(ev, tabName) {
             document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
@@ -846,30 +878,43 @@
         }
 
         function displayParts() {
-            const tb = document.getElementById('partsTableBody');
-            tb.innerHTML = '';
-            if (!data.parts || data.parts.length === 0) {
-                tb.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#9ca3af;">Aucune pièce enregistrée</td></tr>';
-                return;
-            }
-            data.parts.forEach(p=>{
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${p.id}</td>
-                    <td>${p.name}</td>
-                    <td>${p.ref || ''}</td>
-                    <td>${p.stock !== undefined ? p.stock : ''}</td>
-                    <td>${p.price.toFixed(2)} €</td>
-                    <td>${p.vat}%</td>
-                    <td>${p.location || ''}</td>
-                    <td class="actions">
-                        <button class="btn btn-primary btn-icon btn-sm" onclick="editPart('${p.id}')">✏️</button>
-                        <button class="btn btn-danger btn-icon btn-sm" onclick="deletePart('${p.id}')">🗑️</button>
-                    </td>
-                `;
-                tb.appendChild(tr);
-            });
+                const tb = document.getElementById('partsTableBody');
+                tb.innerHTML = '';
+
+                if (!data.parts || data.parts.length === 0) {
+                        tb.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#9ca3af;">Aucune pièce enregistrée</td></tr>';
+                        return;
+                }
+
+                data.parts.forEach(p => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                                <td>${p.id}</td>
+                                <td class="part-name-cell">
+                                        ${p.name}
+                                        ${p.url ? `<a href="${p.url}" target="_blank" style="margin-left:6px;color:#3b82f6;text-decoration:none;font-size:14px;">🔗</a>` : ''}
+                                </td>
+                                <td>${p.ref || ''}</td>
+                                <td>${p.stock !== undefined ? p.stock : ''}</td>
+                                <td>${p.price.toFixed(2)} €</td>
+                                <td>${p.vat}%</td>
+                                <td>${p.location || ''}</td>
+                                <td class="actions">
+                                        <button class="btn btn-primary btn-icon btn-sm" onclick="editPart('${p.id}')">✏️</button>
+                                        <button class="btn btn-danger btn-icon btn-sm" onclick="deletePart('${p.id}')">🗑️</button>
+                                </td>
+                        `;
+
+                        const nameCell = tr.querySelector('.part-name-cell');
+                        if (nameCell && p.description) {
+                                nameCell.title = p.description;
+                        }
+
+                        tb.appendChild(tr);
+                });
         }
+
+
 
         function showAddServiceModal() {
             const name = prompt('Nom du service:');
@@ -886,23 +931,37 @@
         }
 
         function showAddPartModal() {
-            const name = prompt('Nom de la pièce:');
-            if (!name) return;
-            const ref = prompt('Référence:') || '';
-            const stock = parseInt(prompt('Stock disponible:') || '0', 10);
-            const price = parseFloat(prompt('Prix HT:') || '0');
-            const vat = parseFloat(prompt('TVA % (20,10,5.5,0):') || '20');
-            const location = prompt('Emplacement (optionnel):') || '';
-            const p = {
-                id: 'PCE' + String(data.settings.counters.part++).padStart(3,'0'),
-                name, ref, stock, price, vat, location
-            };
-            data.parts.push(p);
-            saveData();
-            displayParts();
-            updatePartsSelects();
-            showNotification('Pièce ajoutée !','success');
+                const name = prompt('Nom de la pièce:');
+                if (!name) return;
+
+                const description = prompt('Description de la pièce (facultatif):') || '';
+                const ref = prompt('Référence:') || '';
+                const stock = parseInt(prompt('Stock disponible:') || '0', 10);
+                const price = parseFloat(prompt('Prix HT:') || '0');
+                const vat = parseFloat(prompt('TVA % (20,10,5.5,0):') || '20');
+                const location = prompt('Emplacement (optionnel):') || '';
+                const url = prompt('Lien URL de la pièce (optionnel):') || '';
+
+                const p = {
+                        id: 'PCE' + String(data.settings.counters.part++).padStart(3,'0'),
+                        name,
+                        description,
+                        ref,
+                        stock,
+                        price,
+                        vat,
+                        location,
+                        url
+                };
+
+                data.parts.push(p);
+                saveData();
+                displayParts();
+                updatePartsSelects();
+                showNotification('Pièce ajoutée !','success');
         }
+
+
 
         function editService(id) {
             const s = data.services.find(x=>x.id===id);
@@ -918,23 +977,28 @@
             updateServiceSelects();
             showNotification('Service modifié !','success');
         }
-
         function editPart(id) {
-            const p = data.parts.find(x=>x.id===id);
-            if (!p) return;
-            const name = prompt('Nom de la pièce:', p.name);
-            if (!name) return;
-            p.name = name;
-            p.ref = prompt('Référence:', p.ref || '') || '';
-            p.stock = parseInt(prompt('Stock disponible:', p.stock || 0) || '0', 10);
-            p.price = parseFloat(prompt('Prix HT:', p.price) || '0');
-            p.vat = parseFloat(prompt('TVA %:', p.vat) || '20');
-            p.location = prompt('Emplacement:', p.location || '') || '';
-            saveData();
-            displayParts();
-            updatePartsSelects();
-            showNotification('Pièce modifiée !','success');
+                const p = data.parts.find(x => x.id === id);
+                if (!p) return;
+
+                const name = prompt('Nom de la pièce:', p.name);
+                if (!name) return;
+
+                p.name = name;
+                p.description = prompt('Description de la pièce (facultatif):', p.description || '') || '';
+                p.ref = prompt('Référence:', p.ref || '') || '';
+                p.stock = parseInt(prompt('Stock disponible:', p.stock || 0) || '0', 10);
+                p.price = parseFloat(prompt('Prix HT:', p.price) || '0');
+                p.vat = parseFloat(prompt('TVA %:', p.vat) || '20');
+                p.location = prompt('Emplacement:', p.location || '') || '';
+                p.url = prompt('Lien URL de la pièce (optionnel):', p.url || '') || '';
+
+                saveData();
+                displayParts();
+                updatePartsSelects();
+                showNotification('Pièce modifiée !','success');
         }
+
 
         function deleteService(id) {
             if (!confirm('Supprimer ce service ?')) return;
