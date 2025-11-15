@@ -995,24 +995,45 @@
                 const p = data.parts.find(x => x.id === id);
                 if (!p) return;
 
-                const name = prompt('Nom de la pièce:', p.name);
-                if (!name) return;
+                const name = prompt('Nom de la pièce :', p.name);
+                if (name === null) return;
 
+                const newId = prompt('ID de la pièce :', p.id);
+                if (newId === null) return;
+
+                const cleanedId = newId.trim();
+
+                if (cleanedId !== p.id) {
+                        const exists = data.parts.some(part => part.id === cleanedId);
+                        if (exists) {
+                                alert('Cet ID existe déjà, merci d’en choisir un autre.');
+                                return;
+                        }
+                }
+
+                const description = prompt('Description de la pièce (facultatif) :', p.description || '') || '';
+                const ref = prompt('Référence :', p.ref || '') || '';
+                const stock = parseInt(prompt('Stock disponible :', p.stock || '0') || '0', 10);
+                const price = parseFloat(prompt('Prix HT :', p.price || '0') || '0');
+                const vat = parseFloat(prompt('TVA % (20,10,5.5,0) :', p.vat || '20') || '20');
+                const location = prompt('Emplacement (optionnel) :', p.location || '') || '';
+                const url = prompt('Lien URL de la pièce (optionnel) :', p.url || '') || '';
+
+                p.id = cleanedId;
                 p.name = name;
-                p.description = prompt('Description de la pièce (facultatif):', p.description || '') || '';
-                p.ref = prompt('Référence:', p.ref || '') || '';
-                p.stock = parseInt(prompt('Stock disponible:', p.stock || 0) || '0', 10);
-                p.price = parseFloat(prompt('Prix HT:', p.price) || '0');
-                p.vat = parseFloat(prompt('TVA %:', p.vat) || '20');
-                p.location = prompt('Emplacement:', p.location || '') || '';
-                p.url = prompt('Lien URL de la pièce (optionnel):', p.url || '') || '';
+                p.description = description;
+                p.ref = ref;
+                p.stock = stock;
+                p.price = price;
+                p.vat = vat;
+                p.location = location;
+                p.url = url;
 
                 saveData();
                 displayParts();
                 updatePartsSelects();
                 showNotification('Pièce modifiée !','success');
         }
-
 
         function deleteService(id) {
             if (!confirm('Supprimer ce service ?')) return;
