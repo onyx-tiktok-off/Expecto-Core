@@ -934,6 +934,19 @@
                 const name = prompt('Nom de la pièce:');
                 if (!name) return;
 
+                const idInput = prompt("ID de la pièce (ex: PCE001). Laissez vide pour générer automatiquement :");
+                if (idInput === null) return;
+
+                const customId = (idInput || '').trim();
+
+                if (customId) {
+                        const exists = data.parts.some(p => p.id === customId);
+                        if (exists) {
+                                alert('Cet ID existe déjà, merci d’en choisir un autre.');
+                                return;
+                        }
+                }
+
                 const description = prompt('Description de la pièce (facultatif):') || '';
                 const ref = prompt('Référence:') || '';
                 const stock = parseInt(prompt('Stock disponible:') || '0', 10);
@@ -943,7 +956,7 @@
                 const url = prompt('Lien URL de la pièce (optionnel):') || '';
 
                 const p = {
-                        id: 'PCE' + String(data.settings.counters.part++).padStart(3,'0'),
+                        id: customId || ('PCE' + String(data.settings.counters.part++).padStart(3,'0')),
                         name,
                         description,
                         ref,
@@ -960,6 +973,7 @@
                 updatePartsSelects();
                 showNotification('Pièce ajoutée !','success');
         }
+
 
 
 
